@@ -33,9 +33,14 @@ export default function Home() {
     : products.filter((p) => p.category === selectedCategory);
 
   const addToCart = (product) => {
+    if (product.stock <= 0) return alert('Yeh item abhi Out of Stock hai!');
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {
+        if (existing.qty >= product.stock) {
+          alert('Stock me aage available nahi hai!');
+          return prev;
+        }
         return prev.map((item) =>
           item.id === product.id ? { ...item, qty: item.qty + 1 } : item
         );
@@ -164,18 +169,27 @@ export default function Home() {
         ) : filteredProducts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '50px', background: '#082017', borderRadius: '12px', border: '1px dashed rgba(212,175,55,0.3)' }}>
             <p style={{ color: '#D4AF37', fontSize: '18px' }}>No products found.</p>
-            <p style={{ color: '#A0B2A6', fontSize: '13px' }}>Add products from the Admin Panel to display them here.</p>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '25px' }}>
             {filteredProducts.map((p) => {
               const finalPrice = p.price - (p.discount || 0);
+              const inStock = p.stock > 0;
               return (
-                <div key={p.id} style={{ background: '#082017', borderRadius: '12px', border: '1px solid rgba(212,175,55,0.15)', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div key={p.id} style={{ background: '#082017', borderRadius: '12px', border: '1px solid rgba(212,175,55,0.15)', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', opacity: inStock ? 1 : 0.7 }}>
                   <div>
-                    <span style={{ fontSize: '10px', textTransform: 'uppercase', color: '#D4AF37', letterSpacing: '1px' }}>{p.category}</span>
+                    {p.image_url ? (
+                      <img src={p.image_url} alt={p.name} style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '8px', marginBottom: '15px' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '140px', background: '#041710', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', marginBottom: '15px' }}>🌿</div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                      <span style={{ fontSize: '10px', textTransform: 'uppercase', color: '#D4AF37', letterSpacing: '1px' }}>{p.category}</span>
+                      <span style={{ fontSize: '12px', fontWeight: 'bold', color: inStock ? '#2ECC71' : '#E74C3C' }}>
+                        {inStock ? `🟢 In Stock (${p.stock})` : '🔴 Out of Stock'}
+                      </span>
+                    </div>
                     <h3 style={{ margin: '8px 0', fontSize: '18px', color: '#F6F1E8' }}>{p.name}</h3>
-                    <p style={{ fontSize: '12px', color: '#A0B2A6', margin: '0 0 15px 0', lineHeight: '1.4' }}>{p.description || 'Authentic formulation.'}</p>
                   </div>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '15px' }}>
@@ -184,9 +198,19 @@ export default function Home() {
                     </div>
                     <button
                       onClick={() => addToCart(p)}
-                      style={{ width: '100%', padding: '10px', background: 'transparent', border: '1px solid #D4AF37', color: '#D4AF37', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
+                      disabled={!inStock}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        background: inStock ? 'transparent' : '#222',
+                        border: inStock ? '1px solid #D4AF37' : '1px solid #444',
+                        color: inStock ? '#D4AF37' : '#777',
+                        borderRadius: '6px',
+                        fontWeight: 'bold',
+                        cursor: inStock ? 'pointer' : 'not-allowed'
+                      }}
                     >
-                      Add to Cart
+                      {inStock ? 'Add to Cart' : 'Out of Stock'}
                     </button>
                   </div>
                 </div>
@@ -265,5 +289,5 @@ export default function Home() {
       )}
     </div>
   );
-            }
-                      
+  }
+              
