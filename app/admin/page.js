@@ -3,24 +3,34 @@ import { useState, useEffect } from 'react';
 import { supabaseFetch } from '../../lib/supabase';
 
 export default function AdminPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const ADMIN_PIN = "1234"; // Default Admin PIN
+
   const [activeTab, setActiveTab] = useState('pos');
   const [products, setProducts] = useState([]);
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // POS State
   const [cart, setCart] = useState([]);
   const [custName, setCustName] = useState('');
   const [custPhone, setCustPhone] = useState('');
 
+  // Product Form State (Add / Edit)
+  const [editingId, setEditingId] = useState(null);
   const [pName, setPName] = useState('');
   const [pCat, setPCat] = useState('');
   const [pPrice, setPPrice] = useState('');
   const [pDisc, setPDisc] = useState('');
   const [pStock, setPStock] = useState('');
+  const [pImg, setPImg] = useState('');
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (isAuthenticated) {
+      loadData();
+    }
+  }, [isAuthenticated]);
 
   const loadData = async () => {
     setLoading(true);
@@ -37,41 +47,83 @@ export default function AdminPage() {
     }
   };
 
-  const handleAddProduct = async (e) => {
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (pinInput === ADMIN_PIN) {
+      setIsAuthenticated(true);
+    } else {
+      alert('Galat Security PIN! Please try again.');
+    }
+  };
+
+  const handleSaveProduct = async (e) => {
     e.preventDefault();
     if (!pName || !pPrice) return;
 
-    const newProd = {
+    const productPayload = {
       name: pName,
       category: pCat || 'General',
       price: parseFloat(pPrice),
       discount: parseFloat(pDisc) || 0,
-      stock: parseInt(pStock) || 0
+      stock: parseInt(pStock) || 0,
+      image_url: pImg || ''
     };
 
-    await supabaseFetch('products', {
-      method: 'POST',
-      body: JSON.stringify([newProd])
-    });
+    if (editingId) {
+      // EDIT EXISTING PRODUCT
+      await supabaseFetch(`products?id=eq.${editingId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(productPayload)
+      });
+      alert('Product update ho gaya!');
+    } else {
+      // ADD NEW PRODUCT
+      await supabaseFetch('products', {
+        method: 'POST',
+        body: JSON.stringify([productPayload])
+      });
+      alert('Naya product add ho gaya!');
+    }
 
-    setPName(''); setPCat(''); setPPrice(''); setPDisc(''); setPStock('');
+    resetForm();
     loadData();
   };
 
+  const startEditProduct = (prod) => {
+    setEditingId(prod.id);
+    setPName(prod.name);
+    setPCat(prod.category || '');
+    setPPrice(prod.price);
+    setPDisc(prod.discount || 0);
+    setPStock(prod.stock || 0);
+    setPImg(prod.image_url || '');
+  };
+
+  const resetForm = () => {
+    setEditingId(null);
+    setPName('');
+    setPCat('');
+    setPPrice('');
+    setPDisc('');
+    setPStock('');
+    setPImg('');
+  };
+
   const handleDeleteProduct = async (id) => {
-    if (confirm('Delete this product?')) {
+    if (confirm('Is product ko delete karna chahte hain?')) {
       await supabaseFetch(`products?id=eq.${id}`, { method: 'DELETE' });
       loadData();
     }
   };
 
+  // POS Cart Functions
   const addToPos = (prod) => {
-    if (prod.stock <= 0) return alert('Out of stock!');
+    if (prod.stock <= 0) return alert('Yeh product Out of Stock hai!');
     setCart((prev) => {
       const exist = prev.find((i) => i.id === prod.id);
       if (exist) {
         if (exist.qty >= prod.stock) {
-          alert('Cannot add more than available stock!');
+          alert('Stock me itna hi maal available hai!');
           return prev;
         }
         return prev.map((i) => (i.id === prod.id ? { ...i, qty: i.qty + 1 } : i));
@@ -80,11 +132,29 @@ export default function AdminPage() {
     });
   };
 
+  const updatePosQty = (id, delta) => {
+    setCart((prev) =>
+      prev
+        .map((item) => {
+          if (item.id === id) {
+            const newQty = item.qty + delta;
+            if (newQty > item.stock) {
+              alert('Stock limit reached!');
+              return item;
+            }
+            return newQty > 0 ? { ...item, qty: newQty } : null;
+          }
+          return item;
+        })
+        .filter(Boolean)
+    );
+  };
+
   const posTotal = cart.reduce((sum, item) => sum + (item.price - (item.discount || 0)) * item.qty, 0);
 
   const handleGenerateBill = async (e) => {
     e.preventDefault();
-    if (cart.length === 0 || !custName) return alert('Cart empty or customer name missing!');
+    if (cart.length === 0 || !custName) return alert('Cart khali hai ya Customer Name nahi daala!');
 
     const invoiceNo = 'AYU-POS-' + Date.now().toString().slice(-6);
 
@@ -124,7 +194,7 @@ export default function AdminPage() {
           });
         }
 
-        alert(`Bill generated successfully! Invoice: ${invoiceNo}`);
+        alert(`Bill Successfully Generated! Invoice: ${invoiceNo}`);
         setCart([]);
         setCustName('');
         setCustPhone('');
@@ -134,6 +204,27 @@ export default function AdminPage() {
       alert('Error generating bill');
     }
   };
+
+  // SECURITY PIN SCREEN
+  if (!isAuthenticated) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#041710', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+        <form onSubmit={handleLogin} style={{ background: '#082017', border: '1px solid #D4AF37', padding: '30px', borderRadius: '12px', textAlign: 'center', width: '300px' }}>
+          <h2 style={{ color: '#D4AF37', fontFamily: "'Cinzel', serif", margin: '0 0 10px 0' }}>AYUKANTI ADMIN</h2>
+          <p style={{ color: '#A0B2A6', fontSize: '13px', marginBottom: '20px' }}>Enter Security PIN (Default: 1234)</p>
+          <input
+            type="password"
+            placeholder="Enter PIN"
+            value={pinInput}
+            onChange={(e) => setPinInput(e.target.value)}
+            required
+            style={{ width: '100%', padding: '12px', background: '#041710', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '6px', textAlign: 'center', fontSize: '18px', letterSpacing: '4px', boxSizing: 'border-box', marginBottom: '15px' }}
+          />
+          <button type="submit" style={{ width: '100%', padding: '12px', background: '#D4AF37', color: '#041710', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Unlock Panel</button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#041710', color: '#F6F1E8', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
@@ -146,6 +237,7 @@ export default function AdminPage() {
           <button onClick={() => setActiveTab('pos')} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #D4AF37', background: activeTab === 'pos' ? '#D4AF37' : 'transparent', color: activeTab === 'pos' ? '#041710' : '#D4AF37', fontWeight: 'bold', cursor: 'pointer' }}>Billing (POS)</button>
           <button onClick={() => setActiveTab('products')} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #D4AF37', background: activeTab === 'products' ? '#D4AF37' : 'transparent', color: activeTab === 'products' ? '#041710' : '#D4AF37', fontWeight: 'bold', cursor: 'pointer' }}>Products</button>
           <button onClick={() => setActiveTab('bills')} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #D4AF37', background: activeTab === 'bills' ? '#D4AF37' : 'transparent', color: activeTab === 'bills' ? '#041710' : '#D4AF37', fontWeight: 'bold', cursor: 'pointer' }}>Bill History</button>
+          <button onClick={() => setIsAuthenticated(false)} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #E74C3C', background: '#E74C3C', color: '#FFF', fontWeight: 'bold', cursor: 'pointer' }}>Lock 🔒</button>
         </div>
       </header>
 
@@ -156,10 +248,17 @@ export default function AdminPage() {
               <h2 style={{ color: '#D4AF37', marginBottom: '15px' }}>Select Products</h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px' }}>
                 {products.map((p) => (
-                  <div key={p.id} onClick={() => addToPos(p)} style={{ background: '#082017', border: '1px solid rgba(212,175,55,0.2)', borderRadius: '8px', padding: '15px', cursor: 'pointer' }}>
+                  <div key={p.id} onClick={() => addToPos(p)} style={{ background: '#082017', border: '1px solid rgba(212,175,55,0.2)', borderRadius: '8px', padding: '12px', cursor: 'pointer', opacity: p.stock > 0 ? 1 : 0.6 }}>
+                    {p.image_url ? (
+                      <img src={p.image_url} alt={p.name} style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '6px', marginBottom: '8px' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '80px', background: '#041710', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#D4AF37', fontSize: '24px', marginBottom: '8px' }}>🌿</div>
+                    )}
                     <div style={{ fontWeight: 'bold', fontSize: '15px' }}>{p.name}</div>
-                    <div style={{ fontSize: '12px', color: '#A0B2A6' }}>Stock: <span style={{ color: p.stock > 0 ? '#2ECC71' : '#E74C3C', fontWeight: 'bold' }}>{p.stock}</span></div>
-                    <div style={{ fontSize: '16px', color: '#D4AF37', fontWeight: 'bold', marginTop: '8px' }}>₹{p.price - (p.discount || 0)}</div>
+                    <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                      Status: {p.stock > 0 ? <span style={{ color: '#2ECC71' }}>🟢 In Stock ({p.stock})</span> : <span style={{ color: '#E74C3C' }}>🔴 Out of Stock</span>}
+                    </div>
+                    <div style={{ fontSize: '16px', color: '#D4AF37', fontWeight: 'bold', marginTop: '6px' }}>₹{p.price - (p.discount || 0)}</div>
                   </div>
                 ))}
               </div>
@@ -174,10 +273,17 @@ export default function AdminPage() {
               </div>
 
               <div style={{ minHeight: '150px', maxHeight: '250px', overflowY: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)', borderBottom: '1px solid rgba(255,255,255,0.1)', padding: '10px 0' }}>
-                {cart.length === 0 ? <p style={{ color: '#A0B2A6', textAlign: 'center' }}>No items added.</p> : cart.map((item) => (
-                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px' }}>
-                    <div>{item.name} x {item.qty}</div>
-                    <div style={{ color: '#D4AF37' }}>₹{(item.price - (item.discount || 0)) * item.qty}</div>
+                {cart.length === 0 ? <p style={{ color: '#A0B2A6', textAlign: 'center' }}>Cart is empty.</p> : cart.map((item) => (
+                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', fontSize: '14px', background: '#041710', padding: '8px', borderRadius: '6px' }}>
+                    <div>
+                      <div style={{ fontWeight: 'bold' }}>{item.name}</div>
+                      <div style={{ color: '#D4AF37', fontSize: '12px' }}>₹{(item.price - (item.discount || 0)) * item.qty}</div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <button onClick={() => updatePosQty(item.id, -1)} style={{ background: '#082017', border: '1px solid #D4AF37', color: '#D4AF37', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
+                      <span>{item.qty}</span>
+                      <button onClick={() => updatePosQty(item.id, 1)} style={{ background: '#082017', border: '1px solid #D4AF37', color: '#D4AF37', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -194,36 +300,54 @@ export default function AdminPage() {
 
         {activeTab === 'products' && (
           <div>
-            <form onSubmit={handleAddProduct} style={{ background: '#082017', border: '1px solid rgba(212,175,55,0.3)', padding: '20px', borderRadius: '8px', marginBottom: '30px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px' }}>
+            <form onSubmit={handleSaveProduct} style={{ background: '#082017', border: '1px solid rgba(212,175,55,0.3)', padding: '20px', borderRadius: '8px', marginBottom: '30px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
               <input type="text" placeholder="Product Name *" value={pName} onChange={(e) => setPName(e.target.value)} required style={{ padding: '8px', background: '#041710', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px' }} />
               <input type="text" placeholder="Category" value={pCat} onChange={(e) => setPCat(e.target.value)} style={{ padding: '8px', background: '#041710', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px' }} />
               <input type="number" placeholder="Price (₹) *" value={pPrice} onChange={(e) => setPPrice(e.target.value)} required style={{ padding: '8px', background: '#041710', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px' }} />
               <input type="number" placeholder="Discount (₹)" value={pDisc} onChange={(e) => setPDisc(e.target.value)} style={{ padding: '8px', background: '#041710', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px' }} />
               <input type="number" placeholder="Stock Qty *" value={pStock} onChange={(e) => setPStock(e.target.value)} required style={{ padding: '8px', background: '#041710', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px' }} />
-              <button type="submit" style={{ padding: '8px', background: '#D4AF37', color: '#041710', border: 'none', fontWeight: 'bold', borderRadius: '4px', cursor: 'pointer' }}>+ Add Item</button>
+              <input type="url" placeholder="Image URL (http...)" value={pImg} onChange={(e) => setPImg(e.target.value)} style={{ padding: '8px', background: '#041710', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px' }} />
+              
+              <div style={{ display: 'flex', gap: '5px' }}>
+                <button type="submit" style={{ flex: 1, padding: '8px', background: '#D4AF37', color: '#041710', border: 'none', fontWeight: 'bold', borderRadius: '4px', cursor: 'pointer' }}>
+                  {editingId ? '✓ Update' : '+ Add Item'}
+                </button>
+                {editingId && (
+                  <button type="button" onClick={resetForm} style={{ padding: '8px', background: '#7A8C82', color: '#FFF', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
+                )}
+              </div>
             </form>
 
             <table style={{ width: '100%', borderCollapse: 'collapse', background: '#082017' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #D4AF37', textAlign: 'left', color: '#D4AF37' }}>
+                  <th style={{ padding: '10px' }}>Image</th>
                   <th style={{ padding: '10px' }}>Name</th>
                   <th style={{ padding: '10px' }}>Category</th>
                   <th style={{ padding: '10px' }}>Price</th>
-                  <th style={{ padding: '10px' }}>Discount</th>
-                  <th style={{ padding: '10px' }}>Stock</th>
-                  <th style={{ padding: '10px' }}>Action</th>
+                  <th style={{ padding: '10px' }}>Stock Status</th>
+                  <th style={{ padding: '10px' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {products.map((p) => (
                   <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: '10px' }}>{p.name}</td>
-                    <td style={{ padding: '10px' }}>{p.category}</td>
-                    <td style={{ padding: '10px' }}>₹{p.price}</td>
-                    <td style={{ padding: '10px' }}>₹{p.discount || 0}</td>
-                    <td style={{ padding: '10px', color: p.stock > 0 ? '#2ECC71' : '#E74C3C', fontWeight: 'bold' }}>{p.stock}</td>
                     <td style={{ padding: '10px' }}>
-                      <button onClick={() => handleDeleteProduct(p.id)} style={{ background: '#E74C3C', color: '#FFF', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>Delete</button>
+                      {p.image_url ? (
+                        <img src={p.image_url} alt={p.name} style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
+                      ) : (
+                        <div style={{ width: '40px', height: '40px', background: '#041710', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🌿</div>
+                      )}
+                    </td>
+                    <td style={{ padding: '10px', fontWeight: 'bold' }}>{p.name}</td>
+                    <td style={{ padding: '10px' }}>{p.category}</td>
+                    <td style={{ padding: '10px' }}>₹{p.price - (p.discount || 0)}</td>
+                    <td style={{ padding: '10px' }}>
+                      {p.stock > 0 ? <span style={{ color: '#2ECC71', fontWeight: 'bold' }}>🟢 In Stock ({p.stock})</span> : <span style={{ color: '#E74C3C', fontWeight: 'bold' }}>🔴 Out of Stock</span>}
+                    </td>
+                    <td style={{ padding: '10px', display: 'flex', gap: '8px' }}>
+                      <button onClick={() => startEditProduct(p)} style={{ background: '#3498DB', color: '#FFF', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>✏️ Edit</button>
+                      <button onClick={() => handleDeleteProduct(p.id)} style={{ background: '#E74C3C', color: '#FFF', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>🗑️ Delete</button>
                     </td>
                   </tr>
                 ))}
@@ -256,4 +380,5 @@ export default function AdminPage() {
       </main>
     </div>
   );
-}
+          }
+    
