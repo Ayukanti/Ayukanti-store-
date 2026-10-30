@@ -112,7 +112,8 @@ export default function Home() {
       setCart([]);
       setIsCheckoutOpen(false);
 
-      const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+      // Aapka WhatsApp number direct link
+      const waUrl = `https://wa.me/919313688716?text=${encodeURIComponent(msg)}`;
       window.open(waUrl, '_blank');
     } catch (err) {
       alert('Order placed!');
@@ -290,4 +291,4 @@ export default function Home() {
     </div>
   );
   }
-              
+                                    
