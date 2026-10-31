@@ -297,7 +297,7 @@ export default function AdminPage() {
         </form>
       </div>
     );
-            }
+}
   return (
     <div style={{ minHeight: '100vh', background: '#061E15', color: '#F6F1E8', fontFamily: "'Plus Jakarta Sans', sans-serif", overflowX: 'hidden' }}>
       <header style={{ background: '#03120C', borderBottom: '2px solid #FFD700', padding: '12px 15px', display: 'flex', flexDirection: 'column', gap: '10px', position: 'sticky', top: 0, zIndex: 100 }}>
@@ -423,7 +423,6 @@ export default function AdminPage() {
                 )}
               </div>
 
-              {/* Product Search Bar */}
               <div style={{ marginBottom: '10px' }}>
                 <input
                   type="text"
@@ -444,7 +443,6 @@ export default function AdminPage() {
                 ))}
               </div>
 
-              {/* Cart Items with Unit Selector */}
               <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
                 <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '6px' }}>Selected Bill Items & Units:</div>
                 {cart.map((item) => (
@@ -455,7 +453,6 @@ export default function AdminPage() {
                     </div>
                     
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      {/* Unit Selector Dropdown */}
                       <select
                         value={item.unit || 'Pcs'}
                         onChange={(e) => updateCartUnit(item.id, e.target.value)}
@@ -483,7 +480,6 @@ export default function AdminPage() {
                 <span>₹{posTotal}</span>
               </div>
 
-              {/* DUAL BILL SAVE BUTTONS */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <button
                   onClick={() => handleGenerateBill(false)}
@@ -503,7 +499,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* TAB 3: HISTORY (EDIT & DELETE OPTIONS ADDED) */}
+        {/* TAB 3: HISTORY */}
         {activeTab === 'history' && (
           <div>
             <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
@@ -587,4 +583,5 @@ export default function AdminPage() {
 
       {/* BILL DETAILS MODAL */}
       {selectedBillDetails && (
-     
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '15px' }}>
+          <div st
