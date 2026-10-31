@@ -221,8 +221,7 @@ export default function AdminPage() {
         </form>
       </div>
     );
-  }
-
+}
   return (
     <div style={{ minHeight: '100vh', background: '#061E15', color: '#F6F1E8', fontFamily: "'Plus Jakarta Sans', sans-serif", overflowX: 'hidden', maxWidth: '100vw' }}>
       <header style={{ background: '#03120C', borderBottom: '1px solid rgba(212,175,55,0.4)', padding: '12px 15px', display: 'flex', flexDirection: 'column', gap: '12px', position: 'sticky', top: 0, zIndex: 100 }}>
@@ -389,4 +388,37 @@ export default function AdminPage() {
                   <div style={{ fontSize: '12px', color: '#A0B2A6', marginTop: '4px' }}>
                     Customer: {b.customer_name} ({b.customer_phone || 'N/A'})
                   </div>
-                  <div style={{ fontSize: '10px', color: '#7A8C82', marginTop: '4px
+                  <div style={{ fontSize: '10px', color: '#7A8C82', marginTop: '4px' }}>
+                    Date: {new Date(b.created_at).toLocaleString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'profit' && (
+          <div>
+            <h3 style={{ color: '#D4AF37', fontSize: '15px', marginBottom: '10px' }}>📊 Day-Wise Revenue & Estimated Profit</h3>
+            <div style={{ display: 'grid', gap: '10px' }}>
+              {getProfitData().map((day, idx) => (
+                <div key={idx} style={{ background: '#020905', border: '1px solid rgba(212,175,55,0.3)', padding: '12px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 'bold', color: '#FFF', fontSize: '13px' }}>📅 Date: {day.date}</div>
+                    <div style={{ fontSize: '11px', color: '#A0B2A6', marginTop: '2px' }}>Total Bills: {day.bills}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ color: '#D4AF37', fontWeight: 'bold', fontSize: '13px' }}>Sales: ₹{day.sales}</div>
+                    <div style={{ color: '#2ECC71', fontWeight: 'bold', fontSize: '11px', marginTop: '2px' }}>Est. Profit: ₹{day.estProfit}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+      </main>
+    </div>
+  );
+                          }
+          
