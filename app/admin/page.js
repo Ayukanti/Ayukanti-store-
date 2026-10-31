@@ -200,7 +200,6 @@ export default function AdminPage() {
     }
   };
 
-  // Group sales by Date for Profit Tab
   const getProfitData = () => {
     const dailyMap = {};
     bills.forEach((b) => {
@@ -215,7 +214,7 @@ export default function AdminPage() {
       date,
       sales: data.totalSales,
       bills: data.billCount,
-      estProfit: Math.round(data.totalSales * 0.35) // 35% estimated profit margin
+      estProfit: Math.round(data.totalSales * 0.35)
     }));
   };
 
@@ -242,7 +241,6 @@ export default function AdminPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#061E15', color: '#F6F1E8', fontFamily: "'Plus Jakarta Sans', sans-serif", overflowX: 'hidden', maxWidth: '100vw' }}>
-      {/* Sticky Header */}
       <header style={{ background: '#03120C', borderBottom: '1px solid rgba(212,175,55,0.4)', padding: '12px 15px', display: 'flex', flexDirection: 'column', gap: '12px', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -252,7 +250,6 @@ export default function AdminPage() {
           <button onClick={() => setIsAuthenticated(false)} style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid #E74C3C', background: '#E74C3C', color: '#FFF', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer' }}>Lock 🔒</button>
         </div>
 
-        {/* 4 Main Nav Options */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
           {[
             { id: 'products', label: 'Product' },
@@ -282,8 +279,6 @@ export default function AdminPage() {
       </header>
 
       <main style={{ padding: '15px', maxWidth: '1000px', margin: '0 auto', boxSizing: 'border-box' }}>
-        
-        {/* OPTION 1: PRODUCT (Add / Edit / List) */}
         {activeTab === 'products' && (
           <div>
             <div style={{ background: '#020905', border: '1px solid rgba(212,175,55,0.4)', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
@@ -337,7 +332,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* OPTION 2: BILLS (Online & Offline Subtabs) */}
         {activeTab === 'bills' && (
           <div>
             <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
@@ -398,8 +392,10 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* OPTION 3: HISTORY */}
         {activeTab === 'history' && (
           <div>
             <h3 style={{ color: '#D4AF37', fontSize: '15px', marginBottom: '10px' }}>📜 Complete Bill History Log</h3>
-            <div style={{ display: 'g
+            <div style={{ display: 'grid', gap: '10px' }}>
+              {bills.map((b) => (
+                <div key={b.id} style={{ background: '#020905', border: '1px solid rgba(212,175,55,0.3)', padding: '12px', borderRadius: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontW
