@@ -200,7 +200,6 @@ export default function Home() {
         <h2 style={{ fontFamily: "'Cinzel', serif", color: '#D4AF37', fontSize: '24px', margin: '0 0 6px 0' }}>Shuddha Ayurveda, Jeevan Mein Nayee Kanti</h2>
         <p style={{ color: isDark ? '#A0B2A6' : '#4A5D52', fontSize: '12px', margin: 0 }}>100% Pure & Time-Tested Formulations</p>
       </section>
-
       <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '20px 15px 60px 15px' }}>
         
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', background: isDark ? '#020905' : '#FFFFFF', border: '1px solid rgba(212,175,55,0.4)', padding: '10px 15px', borderRadius: '8px', marginBottom: '20px', gap: '10px' }}>
@@ -366,4 +365,52 @@ export default function Home() {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <button onClick={() => { window.open(`https://wa.me/${MY_WHATSAPP}?text=Hi, I want to inquire about my cart total ₹${totalCartAmount}`, '_blank'); }} style={{ padding: '10px', background: '#25D366', color: '#FFF', border: 'none', borderRadius: '6px', fontWeight: 'bold', fon
+                  <button onClick={() => { window.open(`https://wa.me/${MY_WHATSAPP}?text=Hi, I want to inquire about my cart total ₹${totalCartAmount}`, '_blank'); }} style={{ padding: '10px', background: '#25D366', color: '#FFF', border: 'none', borderRadius: '6px', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer' }}>
+                    💬 WhatsApp Inquiry
+                  </button>
+
+                  <button onClick={() => { setIsCartOpen(false); openShoppingModal(null); }} style={{ padding: '10px', background: 'linear-gradient(135deg, #D4AF37, #AA7C11)', color: '#03120C', border: 'none', borderRadius: '6px', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer' }}>
+                    🛍️ Online Order
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {isOrderModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '15px' }}>
+          <form onSubmit={handleFinalOrderSubmit} style={{ background: isDark ? '#03120C' : '#FFF', border: '1px solid #D4AF37', borderRadius: '12px', padding: '20px', width: '100%', maxWidth: '400px', maxHeight: '90vh', overflowY: 'auto', boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', borderBottom: '1px solid rgba(212,175,55,0.4)', paddingBottom: '8px' }}>
+              <h3 style={{ margin: 0, color: '#D4AF37', fontFamily: "'Cinzel', serif", fontSize: '16px' }}>Delivery Address Details</h3>
+              <button type="button" onClick={() => setIsOrderModalOpen(false)} style={{ background: 'none', border: 'none', color: isDark ? '#FFF' : '#000', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <div style={{ display: 'grid', gap: '8px' }}>
+              <input type="text" placeholder="Full Name *" value={custName} onChange={(e) => setCustName(e.target.value)} required style={{ padding: '8px', background: isDark ? '#061E15' : '#F0F5F2', border: '1px solid rgba(212,175,55,0.4)', color: isDark ? '#FFF' : '#000', borderRadius: '4px', fontSize: '12px' }} />
+              <input type="tel" placeholder="Mobile / WhatsApp Number *" value={custPhone} onChange={(e) => setCustPhone(e.target.value)} required style={{ padding: '8px', background: isDark ? '#061E15' : '#F0F5F2', border: '1px solid rgba(212,175,55,0.4)', color: isDark ? '#FFF' : '#000', borderRadius: '4px', fontSize: '12px' }} />
+              <input type="text" placeholder="Full Address (House, Street) *" value={custAddress} onChange={(e) => setCustAddress(e.target.value)} required style={{ padding: '8px', background: isDark ? '#061E15' : '#F0F5F2', border: '1px solid rgba(212,175,55,0.4)', color: isDark ? '#FFF' : '#000', borderRadius: '4px', fontSize: '12px' }} />
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <input type="text" placeholder="Pincode *" value={custPincode} onChange={(e) => setCustPincode(e.target.value)} required style={{ padding: '8px', background: isDark ? '#061E15' : '#F0F5F2', border: '1px solid rgba(212,175,55,0.4)', color: isDark ? '#FFF' : '#000', borderRadius: '4px', fontSize: '12px' }} />
+                <input type="text" placeholder="Taluka" value={custTaluka} onChange={(e) => setCustTaluka(e.target.value)} style={{ padding: '8px', background: isDark ? '#061E15' : '#F0F5F2', border: '1px solid rgba(212,175,55,0.4)', color: isDark ? '#FFF' : '#000', borderRadius: '4px', fontSize: '12px' }} />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <input type="text" placeholder="District" value={custDistrict} onChange={(e) => setCustDistrict(e.target.value)} style={{ padding: '8px', background: isDark ? '#061E15' : '#F0F5F2', border: '1px solid rgba(212,175,55,0.4)', color: isDark ? '#FFF' : '#000', borderRadius: '4px', fontSize: '12px' }} />
+                <input type="text" placeholder="State" value={custState} onChange={(e) => setCustState(e.target.value)} style={{ padding: '8px', background: isDark ? '#061E15' : '#F0F5F2', border: '1px solid rgba(212,175,55,0.4)', color: isDark ? '#FFF' : '#000', borderRadius: '4px', fontSize: '12px' }} />
+              </div>
+            </div>
+
+            <button type="submit" style={{ width: '100%', padding: '12px', marginTop: '15px', background: 'linear-gradient(135deg, #D4AF37, #AA7C11)', color: '#03120C', border: 'none', borderRadius: '6px', fontWeight: 'bold', fontSize: '13px', cursor: 'pointer' }}>
+              Confirm & Order via WhatsApp
+            </button>
+          </form>
+        </div>
+      )}
+
+    </div>
+  );
+                }
+        
