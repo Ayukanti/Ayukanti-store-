@@ -5,17 +5,20 @@ import { supabaseFetch } from '../../lib/supabase';
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pinInput, setPinInput] = useState('');
-  const ADMIN_PIN = "1234"; // Default Admin PIN
+  const ADMIN_PIN = "ayukanti@333";
 
-  const [activeTab, setActiveTab] = useState('pos');
+  const [activeTab, setActiveTab] = useState('products'); // 'products', 'bills', 'history', 'profit'
+  const [billSubTab, setBillSubTab] = useState('offline'); // 'online', 'offline'
+  
   const [products, setProducts] = useState([]);
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // POS State
+  // POS & Billing State
   const [cart, setCart] = useState([]);
   const [custName, setCustName] = useState('');
   const [custPhone, setCustPhone] = useState('');
+  const [custAddress, setCustAddress] = useState('');
 
   // Product Form State (Add / Edit)
   const [editingId, setEditingId] = useState(null);
@@ -52,7 +55,7 @@ export default function AdminPage() {
     if (pinInput === ADMIN_PIN) {
       setIsAuthenticated(true);
     } else {
-      alert('Galat Security PIN! Please try again.');
+      alert('Galat Security PIN!');
     }
   };
 
@@ -70,14 +73,12 @@ export default function AdminPage() {
     };
 
     if (editingId) {
-      // EDIT EXISTING PRODUCT
       await supabaseFetch(`products?id=eq.${editingId}`, {
         method: 'PATCH',
         body: JSON.stringify(productPayload)
       });
       alert('Product update ho gaya!');
     } else {
-      // ADD NEW PRODUCT
       await supabaseFetch('products', {
         method: 'POST',
         body: JSON.stringify([productPayload])
@@ -116,16 +117,12 @@ export default function AdminPage() {
     }
   };
 
-  // POS Cart Functions
   const addToPos = (prod) => {
-    if (prod.stock <= 0) return alert('Yeh product Out of Stock hai!');
+    if (prod.stock <= 0) return alert('Out of stock!');
     setCart((prev) => {
       const exist = prev.find((i) => i.id === prod.id);
       if (exist) {
-        if (exist.qty >= prod.stock) {
-          alert('Stock me itna hi maal available hai!');
-          return prev;
-        }
+        if (exist.qty >= prod.stock) return prev;
         return prev.map((i) => (i.id === prod.id ? { ...i, qty: i.qty + 1 } : i));
       }
       return [...prev, { ...prod, qty: 1 }];
@@ -138,10 +135,6 @@ export default function AdminPage() {
         .map((item) => {
           if (item.id === id) {
             const newQty = item.qty + delta;
-            if (newQty > item.stock) {
-              alert('Stock limit reached!');
-              return item;
-            }
             return newQty > 0 ? { ...item, qty: newQty } : null;
           }
           return item;
@@ -154,9 +147,10 @@ export default function AdminPage() {
 
   const handleGenerateBill = async (e) => {
     e.preventDefault();
-    if (cart.length === 0 || !custName) return alert('Cart khali hai ya Customer Name nahi daala!');
+    if (cart.length === 0 || !custName) return alert('Details aur cart items bharein!');
 
-    const invoiceNo = 'AYU-POS-' + Date.now().toString().slice(-6);
+    const prefix = billSubTab === 'online' ? 'AYU-ON-' : 'AYU-OFF-';
+    const invoiceNo = prefix + Date.now().toString().slice(-6);
 
     try {
       const billRes = await supabaseFetch('bills', {
@@ -194,10 +188,11 @@ export default function AdminPage() {
           });
         }
 
-        alert(`Bill Successfully Generated! Invoice: ${invoiceNo}`);
+        alert(`Bill Generated! (${invoiceNo})`);
         setCart([]);
         setCustName('');
         setCustPhone('');
+        setCustAddress('');
         loadData();
       }
     } catch (err) {
@@ -205,180 +200,206 @@ export default function AdminPage() {
     }
   };
 
-  // SECURITY PIN SCREEN
+  // Group sales by Date for Profit Tab
+  const getProfitData = () => {
+    const dailyMap = {};
+    bills.forEach((b) => {
+      const dateStr = new Date(b.created_at).toLocaleDateString();
+      if (!dailyMap[dateStr]) {
+        dailyMap[dateStr] = { totalSales: 0, billCount: 0 };
+      }
+      dailyMap[dateStr].totalSales += parseFloat(b.total_amount || 0);
+      dailyMap[dateStr].billCount += 1;
+    });
+    return Object.entries(dailyMap).map(([date, data]) => ({
+      date,
+      sales: data.totalSales,
+      bills: data.billCount,
+      estProfit: Math.round(data.totalSales * 0.35) // 35% estimated profit margin
+    }));
+  };
+
   if (!isAuthenticated) {
     return (
-      <div style={{ minHeight: '100vh', background: '#041710', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-        <form onSubmit={handleLogin} style={{ background: '#082017', border: '1px solid #D4AF37', padding: '30px', borderRadius: '12px', textAlign: 'center', width: '300px' }}>
-          <h2 style={{ color: '#D4AF37', fontFamily: "'Cinzel', serif", margin: '0 0 10px 0' }}>AYUKANTI ADMIN</h2>
-          <p style={{ color: '#A0B2A6', fontSize: '13px', marginBottom: '20px' }}>Enter Security PIN (Default: 1234)</p>
+      <div style={{ minHeight: '100vh', background: '#061E15', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '15px', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+        <form onSubmit={handleLogin} style={{ background: '#020905', border: '1px solid #D4AF37', padding: '25px', borderRadius: '12px', textAlign: 'center', width: '100%', maxWidth: '320px', boxSizing: 'border-box' }}>
+          <div style={{ fontSize: '32px', marginBottom: '8px' }}>🌿</div>
+          <h2 style={{ color: '#D4AF37', fontFamily: "'Cinzel', serif", margin: '0 0 10px 0', fontSize: '20px' }}>AYUKANTI ADMIN</h2>
+          <p style={{ color: '#A0B2A6', fontSize: '12px', marginBottom: '20px' }}>Security Access</p>
           <input
             type="password"
-            placeholder="Enter PIN"
+            placeholder="PIN"
             value={pinInput}
             onChange={(e) => setPinInput(e.target.value)}
             required
-            style={{ width: '100%', padding: '12px', background: '#041710', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '6px', textAlign: 'center', fontSize: '18px', letterSpacing: '4px', boxSizing: 'border-box', marginBottom: '15px' }}
+            style={{ width: '100%', padding: '12px', background: '#061E15', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '6px', textAlign: 'center', fontSize: '16px', letterSpacing: '2px', boxSizing: 'border-box', marginBottom: '15px' }}
           />
-          <button type="submit" style={{ width: '100%', padding: '12px', background: '#D4AF37', color: '#041710', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Unlock Panel</button>
+          <button type="submit" style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #D4AF37, #AA7C11)', color: '#03120C', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Unlock Panel</button>
         </form>
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#041710', color: '#F6F1E8', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      <header style={{ background: '#020e0a', borderBottom: '1px solid rgba(212,175,55,0.3)', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 style={{ margin: 0, color: '#D4AF37', fontFamily: "'Cinzel', serif", fontSize: '24px' }}>AYUKANTI POS</h1>
-          <p style={{ margin: 0, fontSize: '11px', color: '#A0B2A6' }}>ADMINISTRATOR PANEL</p>
+    <div style={{ minHeight: '100vh', background: '#061E15', color: '#F6F1E8', fontFamily: "'Plus Jakarta Sans', sans-serif", overflowX: 'hidden', maxWidth: '100vw' }}>
+      {/* Sticky Header */}
+      <header style={{ background: '#03120C', borderBottom: '1px solid rgba(212,175,55,0.4)', padding: '12px 15px', display: 'flex', flexDirection: 'column', gap: '12px', position: 'sticky', top: 0, zIndex: 100 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>🌿</span>
+            <h1 style={{ margin: 0, color: '#D4AF37', fontFamily: "'Cinzel', serif", fontSize: '18px', letterSpacing: '1px' }}>AYUKANTI ADMIN</h1>
+          </div>
+          <button onClick={() => setIsAuthenticated(false)} style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid #E74C3C', background: '#E74C3C', color: '#FFF', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer' }}>Lock 🔒</button>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={() => setActiveTab('pos')} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #D4AF37', background: activeTab === 'pos' ? '#D4AF37' : 'transparent', color: activeTab === 'pos' ? '#041710' : '#D4AF37', fontWeight: 'bold', cursor: 'pointer' }}>Billing (POS)</button>
-          <button onClick={() => setActiveTab('products')} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #D4AF37', background: activeTab === 'products' ? '#D4AF37' : 'transparent', color: activeTab === 'products' ? '#041710' : '#D4AF37', fontWeight: 'bold', cursor: 'pointer' }}>Products</button>
-          <button onClick={() => setActiveTab('bills')} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #D4AF37', background: activeTab === 'bills' ? '#D4AF37' : 'transparent', color: activeTab === 'bills' ? '#041710' : '#D4AF37', fontWeight: 'bold', cursor: 'pointer' }}>Bill History</button>
-          <button onClick={() => setIsAuthenticated(false)} style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #E74C3C', background: '#E74C3C', color: '#FFF', fontWeight: 'bold', cursor: 'pointer' }}>Lock 🔒</button>
+
+        {/* 4 Main Nav Options */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+          {[
+            { id: 'products', label: 'Product' },
+            { id: 'bills', label: 'Bills' },
+            { id: 'history', label: 'History' },
+            { id: 'profit', label: 'Profit' }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                padding: '8px 2px',
+                borderRadius: '6px',
+                border: activeTab === tab.id ? '1px solid #D4AF37' : '1px solid rgba(212,175,55,0.2)',
+                background: activeTab === tab.id ? '#D4AF37' : '#020905',
+                color: activeTab === tab.id ? '#03120C' : '#D4AF37',
+                fontWeight: 'bold',
+                fontSize: '12px',
+                cursor: 'pointer',
+                textAlign: 'center'
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </header>
 
-      <main style={{ padding: '30px', maxWidth: '1200px', margin: '0 auto' }}>
-        {activeTab === 'pos' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '25px' }}>
-            <div>
-              <h2 style={{ color: '#D4AF37', marginBottom: '15px' }}>Select Products</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px' }}>
-                {products.map((p) => (
-                  <div key={p.id} onClick={() => addToPos(p)} style={{ background: '#082017', border: '1px solid rgba(212,175,55,0.2)', borderRadius: '8px', padding: '12px', cursor: 'pointer', opacity: p.stock > 0 ? 1 : 0.6 }}>
-                    {p.image_url ? (
-                      <img src={p.image_url} alt={p.name} style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '6px', marginBottom: '8px' }} />
-                    ) : (
-                      <div style={{ width: '100%', height: '80px', background: '#041710', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#D4AF37', fontSize: '24px', marginBottom: '8px' }}>🌿</div>
-                    )}
-                    <div style={{ fontWeight: 'bold', fontSize: '15px' }}>{p.name}</div>
-                    <div style={{ fontSize: '12px', marginTop: '4px' }}>
-                      Status: {p.stock > 0 ? <span style={{ color: '#2ECC71' }}>🟢 In Stock ({p.stock})</span> : <span style={{ color: '#E74C3C' }}>🔴 Out of Stock</span>}
-                    </div>
-                    <div style={{ fontSize: '16px', color: '#D4AF37', fontWeight: 'bold', marginTop: '6px' }}>₹{p.price - (p.discount || 0)}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ background: '#082017', border: '1px solid #D4AF37', borderRadius: '10px', padding: '20px', height: 'fit-content' }}>
-              <h2 style={{ color: '#D4AF37', margin: '0 0 15px 0' }}>Current Bill</h2>
-              
-              <div style={{ marginBottom: '15px' }}>
-                <input type="text" placeholder="Customer Name *" value={custName} onChange={(e) => setCustName(e.target.value)} style={{ width: '100%', padding: '8px', marginBottom: '8px', background: '#041710', border: '1px solid rgba(212,175,55,0.3)', color: '#FFF', borderRadius: '4px', boxSizing: 'border-box' }} />
-                <input type="tel" placeholder="Mobile Number" value={custPhone} onChange={(e) => setCustPhone(e.target.value)} style={{ width: '100%', padding: '8px', background: '#041710', border: '1px solid rgba(212,175,55,0.3)', color: '#FFF', borderRadius: '4px', boxSizing: 'border-box' }} />
-              </div>
-
-              <div style={{ minHeight: '150px', maxHeight: '250px', overflowY: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)', borderBottom: '1px solid rgba(255,255,255,0.1)', padding: '10px 0' }}>
-                {cart.length === 0 ? <p style={{ color: '#A0B2A6', textAlign: 'center' }}>Cart is empty.</p> : cart.map((item) => (
-                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', fontSize: '14px', background: '#041710', padding: '8px', borderRadius: '6px' }}>
-                    <div>
-                      <div style={{ fontWeight: 'bold' }}>{item.name}</div>
-                      <div style={{ color: '#D4AF37', fontSize: '12px' }}>₹{(item.price - (item.discount || 0)) * item.qty}</div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <button onClick={() => updatePosQty(item.id, -1)} style={{ background: '#082017', border: '1px solid #D4AF37', color: '#D4AF37', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
-                      <span>{item.qty}</span>
-                      <button onClick={() => updatePosQty(item.id, 1)} style={{ background: '#082017', border: '1px solid #D4AF37', color: '#D4AF37', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 'bold', margin: '15px 0', color: '#D4AF37' }}>
-                <span>Total:</span>
-                <span>₹{posTotal}</span>
-              </div>
-
-              <button onClick={handleGenerateBill} style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #D4AF37, #AA7C11)', color: '#041710', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Print & Save Bill</button>
-            </div>
-          </div>
-        )}
-
+      <main style={{ padding: '15px', maxWidth: '1000px', margin: '0 auto', boxSizing: 'border-box' }}>
+        
+        {/* OPTION 1: PRODUCT (Add / Edit / List) */}
         {activeTab === 'products' && (
           <div>
-            <form onSubmit={handleSaveProduct} style={{ background: '#082017', border: '1px solid rgba(212,175,55,0.3)', padding: '20px', borderRadius: '8px', marginBottom: '30px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
-              <input type="text" placeholder="Product Name *" value={pName} onChange={(e) => setPName(e.target.value)} required style={{ padding: '8px', background: '#041710', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px' }} />
-              <input type="text" placeholder="Category" value={pCat} onChange={(e) => setPCat(e.target.value)} style={{ padding: '8px', background: '#041710', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px' }} />
-              <input type="number" placeholder="Price (₹) *" value={pPrice} onChange={(e) => setPPrice(e.target.value)} required style={{ padding: '8px', background: '#041710', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px' }} />
-              <input type="number" placeholder="Discount (₹)" value={pDisc} onChange={(e) => setPDisc(e.target.value)} style={{ padding: '8px', background: '#041710', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px' }} />
-              <input type="number" placeholder="Stock Qty *" value={pStock} onChange={(e) => setPStock(e.target.value)} required style={{ padding: '8px', background: '#041710', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px' }} />
-              <input type="url" placeholder="Image URL (http...)" value={pImg} onChange={(e) => setPImg(e.target.value)} style={{ padding: '8px', background: '#041710', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px' }} />
-              
-              <div style={{ display: 'flex', gap: '5px' }}>
-                <button type="submit" style={{ flex: 1, padding: '8px', background: '#D4AF37', color: '#041710', border: 'none', fontWeight: 'bold', borderRadius: '4px', cursor: 'pointer' }}>
-                  {editingId ? '✓ Update' : '+ Add Item'}
-                </button>
-                {editingId && (
-                  <button type="button" onClick={resetForm} style={{ padding: '8px', background: '#7A8C82', color: '#FFF', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
-                )}
-              </div>
-            </form>
+            <div style={{ background: '#020905', border: '1px solid rgba(212,175,55,0.4)', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
+              <h3 style={{ margin: '0 0 12px 0', color: '#D4AF37', fontSize: '15px' }}>
+                {editingId ? '✏️ Edit Product Details' : '➕ Add New Product'}
+              </h3>
+              <form onSubmit={handleSaveProduct} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px' }}>
+                <input type="text" placeholder="Product Name *" value={pName} onChange={(e) => setPName(e.target.value)} required style={{ padding: '8px', background: '#061E15', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
+                <input type="text" placeholder="Category" value={pCat} onChange={(e) => setPCat(e.target.value)} style={{ padding: '8px', background: '#061E15', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
+                <input type="number" placeholder="Price (₹) *" value={pPrice} onChange={(e) => setPPrice(e.target.value)} required style={{ padding: '8px', background: '#061E15', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
+                <input type="number" placeholder="Discount (₹)" value={pDisc} onChange={(e) => setPDisc(e.target.value)} style={{ padding: '8px', background: '#061E15', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
+                <input type="number" placeholder="Stock Qty *" value={pStock} onChange={(e) => setPStock(e.target.value)} required style={{ padding: '8px', background: '#061E15', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
+                <input type="url" placeholder="Image URL (http...)" value={pImg} onChange={(e) => setPImg(e.target.value)} style={{ padding: '8px', background: '#061E15', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
+                
+                <div style={{ display: 'flex', gap: '5px', gridColumn: '1 / -1' }}>
+                  <button type="submit" style={{ flex: 1, padding: '10px', background: 'linear-gradient(135deg, #D4AF37, #AA7C11)', color: '#03120C', border: 'none', fontWeight: 'bold', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>
+                    {editingId ? '✓ Update Product' : '+ Add Product'}
+                  </button>
+                  {editingId && (
+                    <button type="button" onClick={resetForm} style={{ padding: '10px 15px', background: '#555', color: '#FFF', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
+                  )}
+                </div>
+              </form>
+            </div>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', background: '#082017' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid #D4AF37', textAlign: 'left', color: '#D4AF37' }}>
-                  <th style={{ padding: '10px' }}>Image</th>
-                  <th style={{ padding: '10px' }}>Name</th>
-                  <th style={{ padding: '10px' }}>Category</th>
-                  <th style={{ padding: '10px' }}>Price</th>
-                  <th style={{ padding: '10px' }}>Stock Status</th>
-                  <th style={{ padding: '10px' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((p) => (
-                  <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: '10px' }}>
-                      {p.image_url ? (
-                        <img src={p.image_url} alt={p.name} style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
-                      ) : (
-                        <div style={{ width: '40px', height: '40px', background: '#041710', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🌿</div>
-                      )}
-                    </td>
-                    <td style={{ padding: '10px', fontWeight: 'bold' }}>{p.name}</td>
-                    <td style={{ padding: '10px' }}>{p.category}</td>
-                    <td style={{ padding: '10px' }}>₹{p.price - (p.discount || 0)}</td>
-                    <td style={{ padding: '10px' }}>
-                      {p.stock > 0 ? <span style={{ color: '#2ECC71', fontWeight: 'bold' }}>🟢 In Stock ({p.stock})</span> : <span style={{ color: '#E74C3C', fontWeight: 'bold' }}>🔴 Out of Stock</span>}
-                    </td>
-                    <td style={{ padding: '10px', display: 'flex', gap: '8px' }}>
-                      <button onClick={() => startEditProduct(p)} style={{ background: '#3498DB', color: '#FFF', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>✏️ Edit</button>
-                      <button onClick={() => handleDeleteProduct(p.id)} style={{ background: '#E74C3C', color: '#FFF', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>🗑️ Delete</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {activeTab === 'bills' && (
-          <div>
-            <h2 style={{ color: '#D4AF37' }}>Recent Bills & Sales</h2>
-            <div style={{ display: 'grid', gap: '15px' }}>
-              {bills.map((b) => (
-                <div key={b.id} style={{ background: '#082017', border: '1px solid rgba(212,175,55,0.2)', padding: '15px', borderRadius: '8px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', color: '#D4AF37' }}>
-                    <span>{b.invoice_no}</span>
-                    <span>₹{b.total_amount}</span>
+            <h3 style={{ color: '#D4AF37', fontSize: '15px', marginBottom: '10px' }}>📦 Product Inventory List</h3>
+            <div style={{ display: 'grid', gap: '10px' }}>
+              {products.map((p) => (
+                <div key={p.id} style={{ background: '#020905', border: '1px solid rgba(212,175,55,0.3)', padding: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {p.image_url ? (
+                      <img src={p.image_url} alt={p.name} style={{ width: '45px', height: '45px', objectFit: 'cover', borderRadius: '4px' }} />
+                    ) : (
+                      <div style={{ width: '45px', height: '45px', background: '#061E15', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🌿</div>
+                    )}
+                    <div>
+                      <div style={{ fontWeight: 'bold', fontSize: '13px' }}>{p.name}</div>
+                      <div style={{ fontSize: '11px', color: '#D4AF37' }}>₹{p.price - (p.discount || 0)} | {p.category}</div>
+                      <div style={{ fontSize: '10px', marginTop: '2px' }}>
+                        {p.stock > 0 ? <span style={{ color: '#2ECC71' }}>🟢 Stock: {p.stock}</span> : <span style={{ color: '#E74C3C' }}>🔴 Out of Stock</span>}
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ fontSize: '13px', color: '#A0B2A6', marginTop: '5px' }}>
-                    Customer: {b.customer_name} ({b.customer_phone || 'N/A'})
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#7A8C82', marginTop: '5px' }}>
-                    Date: {new Date(b.created_at).toLocaleString()}
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button onClick={() => startEditProduct(p)} style={{ background: '#3498DB', color: '#FFF', border: 'none', padding: '6px 10px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>Edit</button>
+                    <button onClick={() => handleDeleteProduct(p.id)} style={{ background: '#E74C3C', color: '#FFF', border: 'none', padding: '6px 10px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>Delete</button>
                   </div>
                 </div>
               ))}
             </div>
           </div>
         )}
-      </main>
-    </div>
-  );
-          }
-    
+
+        {/* OPTION 2: BILLS (Online & Offline Subtabs) */}
+        {activeTab === 'bills' && (
+          <div>
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+              <button
+                onClick={() => setBillSubTab('offline')}
+                style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #D4AF37', background: billSubTab === 'offline' ? '#D4AF37' : '#020905', color: billSubTab === 'offline' ? '#03120C' : '#D4AF37', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
+              >
+                Offline Billing (POS)
+              </button>
+              <button
+                onClick={() => setBillSubTab('online')}
+                style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #D4AF37', background: billSubTab === 'online' ? '#D4AF37' : '#020905', color: billSubTab === 'online' ? '#03120C' : '#D4AF37', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
+              >
+                Online Orders Billing
+              </button>
+            </div>
+
+            <div style={{ background: '#020905', border: '1px solid #D4AF37', borderRadius: '8px', padding: '15px' }}>
+              <h3 style={{ color: '#D4AF37', margin: '0 0 10px 0', fontSize: '15px' }}>
+                {billSubTab === 'offline' ? '🛍️ Offline Counter POS' : '🌐 Online Customer Billing'}
+              </h3>
+              
+              <div style={{ display: 'grid', gap: '8px', marginBottom: '12px' }}>
+                <input type="text" placeholder="Customer Name *" value={custName} onChange={(e) => setCustName(e.target.value)} style={{ padding: '8px', background: '#061E15', border: '1px solid rgba(212,175,55,0.4)', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
+                <input type="tel" placeholder="Mobile Number *" value={custPhone} onChange={(e) => setCustPhone(e.target.value)} style={{ padding: '8px', background: '#061E15', border: '1px solid rgba(212,175,55,0.4)', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
+                {billSubTab === 'online' && (
+                  <input type="text" placeholder="Delivery Address" value={custAddress} onChange={(e) => setCustAddress(e.target.value)} style={{ padding: '8px', background: '#061E15', border: '1px solid rgba(212,175,55,0.4)', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
+                )}
+              </div>
+
+              <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#D4AF37', marginBottom: '8px' }}>Select Items to Bill:</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '8px', maxHeight: '180px', overflowY: 'auto', marginBottom: '15px' }}>
+                {products.map((p) => (
+                  <div key={p.id} onClick={() => addToPos(p)} style={{ background: '#061E15', border: '1px solid rgba(212,175,55,0.2)', padding: '8px', borderRadius: '6px', cursor: 'pointer', opacity: p.stock > 0 ? 1 : 0.5 }}>
+                    <div style={{ fontSize: '11px', fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+                    <div style={{ color: '#D4AF37', fontSize: '11px' }}>₹{p.price - (p.discount || 0)}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '6px' }}>Cart Items:</div>
+                {cart.map((item) => (
+                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px', background: '#061E15', padding: '4px 8px', borderRadius: '4px' }}>
+                    <span>{item.name} x {item.qty}</span>
+                    <span style={{ color: '#D4AF37' }}>₹{(item.price - (item.discount || 0)) * item.qty}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', color: '#D4AF37', margin: '12px 0', fontSize: '16px' }}>
+                <span>Total:</span>
+                <span>₹{posTotal}</span>
+              </div>
+
+              <button onClick={handleGenerateBill} style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #D4AF37, #AA7C11)', color: '#03120C', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Generate & Save Bill</button>
+            </div>
+          </div>
+        )}
+
+        {/* OPTION 3: HISTORY */}
+        {activeTab === 'history' && (
+          <div>
+            <h3 style={{ color: '#D4AF37', fontSize: '15px', marginBottom: '10px' }}>📜 Complete Bill History Log</h3>
+            <div style={{ display: 'g
