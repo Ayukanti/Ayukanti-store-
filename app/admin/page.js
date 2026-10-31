@@ -7,20 +7,18 @@ export default function AdminPage() {
   const [pinInput, setPinInput] = useState('');
   const ADMIN_PIN = "ayukanti@333";
 
-  const [activeTab, setActiveTab] = useState('products'); // 'products', 'bills', 'history', 'profit'
-  const [billSubTab, setBillSubTab] = useState('offline'); // 'online', 'offline'
+  const [activeTab, setActiveTab] = useState('products');
+  const [billSubTab, setBillSubTab] = useState('offline');
   
   const [products, setProducts] = useState([]);
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // POS & Billing State
   const [cart, setCart] = useState([]);
   const [custName, setCustName] = useState('');
   const [custPhone, setCustPhone] = useState('');
   const [custAddress, setCustAddress] = useState('');
 
-  // Product Form State (Add / Edit)
   const [editingId, setEditingId] = useState(null);
   const [pName, setPName] = useState('');
   const [pCat, setPCat] = useState('');
@@ -127,20 +125,6 @@ export default function AdminPage() {
       }
       return [...prev, { ...prod, qty: 1 }];
     });
-  };
-
-  const updatePosQty = (id, delta) => {
-    setCart((prev) =>
-      prev
-        .map((item) => {
-          if (item.id === id) {
-            const newQty = item.qty + delta;
-            return newQty > 0 ? { ...item, qty: newQty } : null;
-          }
-          return item;
-        })
-        .filter(Boolean)
-    );
   };
 
   const posTotal = cart.reduce((sum, item) => sum + (item.price - (item.discount || 0)) * item.qty, 0);
@@ -398,4 +382,11 @@ export default function AdminPage() {
             <div style={{ display: 'grid', gap: '10px' }}>
               {bills.map((b) => (
                 <div key={b.id} style={{ background: '#020905', border: '1px solid rgba(212,175,55,0.3)', padding: '12px', borderRadius: '8px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontW
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', color: '#D4AF37', fontSize: '13px' }}>
+                    <span>{b.invoice_no}</span>
+                    <span>₹{b.total_amount}</span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#A0B2A6', marginTop: '4px' }}>
+                    Customer: {b.customer_name} ({b.customer_phone || 'N/A'})
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#7A8C82', marginTop: '4px
