@@ -13,12 +13,10 @@ export default function Home() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [themeMode, setThemeMode] = useState('dark');
 
-  // Customer Profile State
   const [userPhone, setUserPhone] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // Full Order Form State (Address fields)
-  const [orderModalProduct, setOrderModalProduct] = useState(null); // null if full cart checkout
+  const [orderModalProduct, setOrderModalProduct] = useState(null);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   
   const [custName, setCustName] = useState('');
@@ -84,19 +82,16 @@ export default function Home() {
 
   const totalCartAmount = cart.reduce((sum, item) => sum + (item.price - (item.discount || 0)) * item.qty, 0);
 
-  // Single Item Direct WhatsApp Inquiry
   const handleWhatsAppInquiry = (prod) => {
     const text = `*Ayukanti Product Inquiry*\nProduct: ${prod.name}\nPrice: ₹${prod.price - (prod.discount || 0)}\n\nHello, I want to inquire about this product.`;
     window.open(`https://wa.me/${MY_WHATSAPP}?text=${encodeURIComponent(text)}`, '_blank');
   };
 
-  // Open Full Online Shopping Modal
   const openShoppingModal = (prod = null) => {
     setOrderModalProduct(prod);
     setIsOrderModalOpen(true);
   };
 
-  // Submit Full Order Form with Address Details
   const handleFinalOrderSubmit = async (e) => {
     e.preventDefault();
     if (!custName || !custPhone || !custAddress || !custPincode) return alert('Sari zaroori details bharein!');
@@ -165,7 +160,6 @@ export default function Home() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: isDark ? '#061E15' : '#FAF7F2', color: isDark ? '#F6F1E8' : '#1A3326', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       
-      {/* Ultra Premium Sticky Header */}
       <header style={{ position: 'sticky', top: 0, zIndex: 100, background: isDark ? '#03120C' : '#FFFFFF', borderBottom: '1px solid rgba(212,175,55,0.4)', padding: '12px 18px', boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           
@@ -178,21 +172,17 @@ export default function Home() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* Search Toggle */}
             <button onClick={() => setIsSearchOpen(!isSearchOpen)} style={{ background: 'none', border: 'none', color: '#D4AF37', fontSize: '18px', cursor: 'pointer' }}>🔍</button>
             
-            {/* Cart Counter */}
             <button onClick={() => setIsCartOpen(true)} style={{ background: 'linear-gradient(135deg, #D4AF37, #AA7C11)', color: '#03120C', border: 'none', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
               <span>🛒</span>
               <span>{cart.reduce((s, i) => s + i.qty, 0)}</span>
             </button>
 
-            {/* Side Menu Drawer Button */}
             <button onClick={() => setIsMenuOpen(true)} style={{ background: 'none', border: 'none', color: '#D4AF37', fontSize: '22px', cursor: 'pointer' }}>☰</button>
           </div>
         </div>
 
-        {/* Expandable Search Input */}
         {isSearchOpen && (
           <div style={{ marginTop: '10px' }}>
             <input
@@ -206,13 +196,11 @@ export default function Home() {
         )}
       </header>
 
-      {/* Main Hero Section */}
       <section style={{ textAlign: 'center', padding: '30px 15px', background: isDark ? 'radial-gradient(circle, rgba(12,45,33,1) 0%, rgba(6,30,21,1) 100%)' : '#EFEAE1', borderBottom: '1px solid rgba(212,175,55,0.15)' }}>
         <h2 style={{ fontFamily: "'Cinzel', serif", color: '#D4AF37', fontSize: '24px', margin: '0 0 6px 0' }}>Shuddha Ayurveda, Jeevan Mein Nayee Kanti</h2>
         <p style={{ color: isDark ? '#A0B2A6' : '#4A5D52', fontSize: '12px', margin: 0 }}>100% Pure & Time-Tested Formulations</p>
       </section>
 
-      {/* Category Dropdown & Total Products Display */}
       <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '20px 15px 60px 15px' }}>
         
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', background: isDark ? '#020905' : '#FFFFFF', border: '1px solid rgba(212,175,55,0.4)', padding: '10px 15px', borderRadius: '8px', marginBottom: '20px', gap: '10px' }}>
@@ -234,7 +222,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Product Grid */}
         {loading ? (
           <p style={{ textAlign: 'center', color: '#A0B2A6' }}>Loading products...</p>
         ) : filteredProducts.length === 0 ? (
@@ -250,7 +237,7 @@ export default function Home() {
                   style={{
                     background: isDark ? '#020905' : '#FFFFFF',
                     borderRadius: '12px',
-                    border: '1px solid rgba(212, 175, 55, 0.4)', // Patali Gold Border
+                    border: '1px solid rgba(212, 175, 55, 0.4)',
                     padding: '15px',
                     display: 'flex',
                     flexDirection: 'column',
@@ -279,7 +266,6 @@ export default function Home() {
                       {p.discount > 0 && <span style={{ textDecoration: 'line-through', color: '#7A8C82', fontSize: '12px' }}>₹{p.price}</span>}
                     </div>
 
-                    {/* Dual Action Buttons at Box Bottom */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                       <button
                         onClick={() => handleWhatsAppInquiry(p)}
@@ -304,7 +290,6 @@ export default function Home() {
         )}
       </main>
 
-      {/* SIDE MENU DRAWER (Profile, Mode, WhatsApp Chat, Settings) */}
       {isMenuOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 200, display: 'flex', justifyContent: 'flex-start' }}>
           <div style={{ width: '80%', maxWidth: '300px', background: isDark ? '#03120C' : '#FFF', height: '100%', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRight: '1px solid #D4AF37', boxSizing: 'border-box' }}>
@@ -314,7 +299,6 @@ export default function Home() {
                 <button onClick={() => setIsMenuOpen(false)} style={{ background: 'none', border: 'none', color: isDark ? '#FFF' : '#000', fontSize: '20px', cursor: 'pointer' }}>✕</button>
               </div>
 
-              {/* Profile Login */}
               <div style={{ background: isDark ? '#061E15' : '#F0F5F2', padding: '12px', borderRadius: '8px', marginBottom: '15px' }}>
                 <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#D4AF37', marginBottom: '6px' }}>👤 Customer Profile</div>
                 {isLoggedIn ? (
@@ -327,18 +311,15 @@ export default function Home() {
                 )}
               </div>
 
-              {/* Theme Mode Toggle */}
               <div onClick={() => setThemeMode(isDark ? 'light' : 'dark')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontSize: '13px' }}>
                 <span>🌓 Theme Mode</span>
                 <span style={{ color: '#D4AF37', fontWeight: 'bold' }}>{isDark ? 'Dark' : 'Light'}</span>
               </div>
 
-              {/* WhatsApp Direct Chat */}
               <div onClick={() => window.open(`https://wa.me/${MY_WHATSAPP}`, '_blank')} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontSize: '13px', color: '#2ECC71' }}>
                 <span>💬 Direct WhatsApp Support</span>
               </div>
 
-              {/* App Settings */}
               <div style={{ padding: '10px 0', fontSize: '13px', color: isDark ? '#A0B2A6' : '#555' }}>
                 ⚙️ App Settings & Policies
               </div>
@@ -347,7 +328,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* CART DRAWER */}
       {isCartOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 200, display: 'flex', justifyContent: 'flex-end' }}>
           <div style={{ width: '100%', maxWidth: '380px', background: isDark ? '#03120C' : '#FFF', borderLeft: '1px solid #D4AF37', height: '100%', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxSizing: 'border-box' }}>
@@ -373,4 +353,17 @@ export default function Home() {
                         <button onClick={() => updateQty(item.id, 1)} style={{ background: '#061E15', border: '1px solid #D4AF37', color: '#D4AF37', padding: '2px 6px', borderRadius: '4px' }}>+</button>
                       </div>
                     </div>
-  
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {cart.length > 0 && (
+              <div style={{ borderTop: '1px solid rgba(212,175,55,0.4)', paddingTop: '15px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', color: '#D4AF37', marginBottom: '12px', fontSize: '16px' }}>
+                  <span>Total Amount:</span>
+                  <span>₹{totalCartAmount}</span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <button onClick={() => { window.open(`https://wa.me/${MY_WHATSAPP}?text=Hi, I want to inquire about my cart total ₹${totalCartAmount}`, '_blank'); }} style={{ padding: '10px', background: '#25D366', color: '#FFF', border: 'none', borderRadius: '6px', fontWeight: 'bold', fon
