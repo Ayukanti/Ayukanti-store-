@@ -18,6 +18,7 @@ export default function AdminPage() {
   const [posSearch, setPosSearch] = useState('');
   const [historySubTab, setHistorySubTab] = useState('online');
   const [selectedBillDetails, setSelectedBillDetails] = useState(null);
+  const [editingBill, setEditingBill] = useState(null);
   const [profitSubTab, setProfitSubTab] = useState('daily');
 
   // POS State
@@ -126,14 +127,31 @@ export default function AdminPage() {
         if (exist.qty >= prod.stock) return prev;
         return prev.map((i) => (i.id === prod.id ? { ...i, qty: i.qty + 1 } : i));
       }
-      return [...prev, { ...prod, qty: 1 }];
+      return [...prev, { ...prod, qty: 1, unit: 'Pcs' }];
     });
+  };
+
+  const updateCartUnit = (id, newUnit) => {
+    setCart(prev => prev.map(item => item.id === id ? { ...item, unit: newUnit } : item));
+  };
+
+  const updatePosQty = (id, delta) => {
+    setCart((prev) =>
+      prev
+        .map((item) => {
+          if (item.id === id) {
+            const newQty = item.qty + delta;
+            return newQty > 0 ? { ...item, qty: newQty } : null;
+          }
+          return item;
+        })
+        .filter(Boolean)
+    );
   };
 
   const posTotal = cart.reduce((sum, item) => sum + (item.price - (item.discount || 0)) * item.qty, 0);
 
-  const handleGenerateBill = async (e) => {
-    e.preventDefault();
+  const handleGenerateBill = async (shouldShare = false) => {
     if (cart.length === 0 || !custName) return alert('Customer Name aur Cart Items zaroori hain!');
 
     const prefix = billSubTab === 'online' ? 'AYU-ON-' : 'AYU-OFF-';
@@ -156,7 +174,7 @@ export default function AdminPage() {
         const items = cart.map((item) => ({
           bill_id: billId,
           product_id: item.id,
-          product_name: item.name,
+          product_name: `${item.name} (${item.unit || 'Pcs'})`,
           unit_price: item.price - (item.discount || 0),
           quantity: item.qty,
           total_price: (item.price - (item.discount || 0)) * item.qty
@@ -175,12 +193,61 @@ export default function AdminPage() {
           });
         }
 
-        alert(`Bill Generated Successfully! Invoice: ${invoiceNo}`);
+        if (shouldShare && custPhone) {
+          let msg = `*AYUKANTI OFFICIAL RECEIPT*\n`;
+          msg += `Invoice: ${invoiceNo}\n`;
+          msg += `Customer: ${custName}\n`;
+          msg += `Phone: ${custPhone}\n\n`;
+          msg += `*ITEMS:*\n`;
+          cart.forEach(i => {
+            msg += `- ${i.name} (${i.unit || 'Pcs'}) x ${i.qty} = ₹${(i.price - (i.discount || 0)) * i.qty}\n`;
+          });
+          msg += `\n*TOTAL AMOUNT: ₹${posTotal}*\nThank you for shopping with Ayukanti!🌿`;
+
+          const cleanPhone = custPhone.replace(/[^0-9]/g, '');
+          window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+        } else {
+          alert(`Bill Saved Successfully! Invoice: ${invoiceNo}`);
+        }
+
         setCart([]); setCustName(''); setCustPhone(''); setCustAddress('');
         loadData();
       }
     } catch (err) {
       alert('Error generating bill');
+    }
+  };
+
+  const handleDeleteBill = async (billId) => {
+    if (confirm('Kya aap sach mein is bill ko permanent delete karna chahte hain?')) {
+      try {
+        await supabaseFetch(`bills?id=eq.${billId}`, { method: 'DELETE' });
+        alert('Bill delete ho gaya!');
+        setSelectedBillDetails(null);
+        loadData();
+      } catch (err) {
+        alert('Error deleting bill');
+      }
+    }
+  };
+
+  const handleUpdateBillSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingBill) return;
+    try {
+      await supabaseFetch(`bills?id=eq.${editingBill.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          customer_name: editingBill.customer_name,
+          customer_phone: editingBill.customer_phone,
+          total_amount: parseFloat(editingBill.total_amount) || 0
+        })
+      });
+      alert('Bill successfully update ho gaya!');
+      setEditingBill(null);
+      loadData();
+    } catch (err) {
+      alert('Error updating bill');
     }
   };
 
@@ -230,7 +297,7 @@ export default function AdminPage() {
         </form>
       </div>
     );
-}
+            }
   return (
     <div style={{ minHeight: '100vh', background: '#061E15', color: '#F6F1E8', fontFamily: "'Plus Jakarta Sans', sans-serif", overflowX: 'hidden' }}>
       <header style={{ background: '#03120C', borderBottom: '2px solid #FFD700', padding: '12px 15px', display: 'flex', flexDirection: 'column', gap: '10px', position: 'sticky', top: 0, zIndex: 100 }}>
@@ -325,7 +392,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* TAB 2: BILLS (POS) WITH SEARCH */}
+        {/* TAB 2: BILLS (POS) WITH SEARCH & UNITS & SAVE / SHARE OPTIONS */}
         {activeTab === 'bills' && (
           <div>
             <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
@@ -350,13 +417,13 @@ export default function AdminPage() {
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
                 <input type="text" placeholder="Customer Name *" value={custName} onChange={(e) => setCustName(e.target.value)} style={{ padding: '8px', background: '#061E15', border: '1px solid rgba(255,215,0,0.4)', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
-                <input type="tel" placeholder="Mobile Number *" value={custPhone} onChange={(e) => setCustPhone(e.target.value)} style={{ padding: '8px', background: '#061E15', border: '1px solid rgba(255,215,0,0.4)', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
+                <input type="tel" placeholder="WhatsApp Mobile Number *" value={custPhone} onChange={(e) => setCustPhone(e.target.value)} style={{ padding: '8px', background: '#061E15', border: '1px solid rgba(255,215,0,0.4)', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
                 {billSubTab === 'online' && (
                   <input type="text" placeholder="Delivery Address" value={custAddress} onChange={(e) => setCustAddress(e.target.value)} style={{ padding: '8px', background: '#061E15', border: '1px solid rgba(255,215,0,0.4)', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
                 )}
               </div>
 
-              {/* Product Search Bar inside POS */}
+              {/* Product Search Bar */}
               <div style={{ marginBottom: '10px' }}>
                 <input
                   type="text"
@@ -367,7 +434,7 @@ export default function AdminPage() {
                 />
               </div>
 
-              <div style={{ fontWeight: 'bold', fontSize: '12px', color: '#FFD700', marginBottom: '8px' }}>Select Product:</div>
+              <div style={{ fontWeight: 'bold', fontSize: '12px', color: '#FFD700', marginBottom: '8px' }}>Select Products:</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '8px', maxHeight: '180px', overflowY: 'auto', marginBottom: '15px' }}>
                 {products.filter(p => p.name.toLowerCase().includes(posSearch.toLowerCase())).map((p) => (
                   <div key={p.id} onClick={() => addToPos(p)} style={{ background: '#061E15', border: '1px solid rgba(255,215,0,0.3)', padding: '8px', borderRadius: '6px', cursor: 'pointer', opacity: p.stock > 0 ? 1 : 0.5 }}>
@@ -377,27 +444,66 @@ export default function AdminPage() {
                 ))}
               </div>
 
+              {/* Cart Items with Unit Selector */}
               <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '6px' }}>Cart Items:</div>
+                <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '6px' }}>Selected Bill Items & Units:</div>
                 {cart.map((item) => (
-                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px', background: '#061E15', padding: '4px 8px', borderRadius: '4px' }}>
-                    <span>{item.name} x {item.qty}</span>
-                    <span style={{ color: '#FFD700' }}>₹{(item.price - (item.discount || 0)) * item.qty}</span>
+                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', marginBottom: '6px', background: '#061E15', padding: '6px 8px', borderRadius: '4px' }}>
+                    <div>
+                      <div style={{ fontWeight: 'bold' }}>{item.name}</div>
+                      <div style={{ fontSize: '11px', color: '#FFD700' }}>₹{(item.price - (item.discount || 0)) * item.qty}</div>
+                    </div>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {/* Unit Selector Dropdown */}
+                      <select
+                        value={item.unit || 'Pcs'}
+                        onChange={(e) => updateCartUnit(item.id, e.target.value)}
+                        style={{ background: '#020905', color: '#FFD700', border: '1px solid #FFD700', padding: '2px 4px', borderRadius: '4px', fontSize: '11px' }}
+                      >
+                        <option value="Pcs">Pcs</option>
+                        <option value="Bottle">Bottle</option>
+                        <option value="Pack">Pack</option>
+                        <option value="Kg">Kg</option>
+                        <option value="Gm">Gm</option>
+                        <option value="Ltr">Ltr</option>
+                        <option value="Box">Box</option>
+                      </select>
+
+                      <button onClick={() => updatePosQty(item.id, -1)} style={{ background: '#020905', border: '1px solid #FFD700', color: '#FFD700', padding: '2px 6px', borderRadius: '4px' }}>-</button>
+                      <span>{item.qty}</span>
+                      <button onClick={() => updatePosQty(item.id, 1)} style={{ background: '#020905', border: '1px solid #FFD700', color: '#FFD700', padding: '2px 6px', borderRadius: '4px' }}>+</button>
+                    </div>
                   </div>
                 ))}
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', color: '#FFD700', margin: '12px 0', fontSize: '16px' }}>
-                <span>Total:</span>
+                <span>Total Amount:</span>
                 <span>₹{posTotal}</span>
               </div>
 
-              <button onClick={handleGenerateBill} style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #FFD700, #AA7C11)', color: '#03120C', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Generate & Save Bill</button>
+              {/* DUAL BILL SAVE BUTTONS */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <button
+                  onClick={() => handleGenerateBill(false)}
+                  style={{ padding: '12px', background: '#27AE60', color: '#FFF', border: 'none', borderRadius: '6px', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
+                >
+                  💾 Save Bill Only
+                </button>
+
+                <button
+                  onClick={() => handleGenerateBill(true)}
+                  style={{ padding: '12px', background: 'linear-gradient(135deg, #FFD700, #AA7C11)', color: '#03120C', border: 'none', borderRadius: '6px', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
+                >
+                  📲 Save & Share WhatsApp
+                </button>
+              </div>
             </div>
           </div>
         )}
 
-        {/* TAB 3: HISTORY (ONLINE vs OFFLINE FOLDERS & CLICKABLE DETAILS) */}
+        {/* TAB 3: HISTORY (EDIT & DELETE OPTIONS ADDED) */}
         {activeTab === 'history' && (
           <div>
             <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
@@ -405,13 +511,13 @@ export default function AdminPage() {
                 onClick={() => setHistorySubTab('online')}
                 style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #FFD700', background: historySubTab === 'online' ? '#FFD700' : '#020905', color: historySubTab === 'online' ? '#03120C' : '#FFD700', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
               >
-                🌐 Online Bills Folder
+                🌐 Online Bills
               </button>
               <button
                 onClick={() => setHistorySubTab('offline')}
                 style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #FFD700', background: historySubTab === 'offline' ? '#FFD700' : '#020905', color: historySubTab === 'offline' ? '#03120C' : '#FFD700', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
               >
-                🛍️ Offline Bills Folder
+                🛍️ Offline Bills
               </button>
             </div>
 
@@ -419,19 +525,22 @@ export default function AdminPage() {
               {bills
                 .filter(b => historySubTab === 'online' ? b.invoice_no.includes('ON') : !b.invoice_no.includes('ON'))
                 .map((b) => (
-                  <div key={b.id} onClick={() => setSelectedBillDetails(b)} style={{ background: '#020905', border: '1px solid rgba(255,215,0,0.4)', padding: '12px', borderRadius: '8px', cursor: 'pointer' }}>
+                  <div key={b.id} style={{ background: '#020905', border: '1px solid rgba(255,215,0,0.4)', padding: '12px', borderRadius: '8px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', color: '#FFD700', fontSize: '13px' }}>
                       <span>{b.invoice_no}</span>
                       <span>₹{b.total_amount}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
                       <span style={{ fontSize: '12px', color: '#FFF' }}>{b.customer_name} ({b.customer_phone || 'N/A'})</span>
-                      <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: b.invoice_no.includes('ON') ? '#27AE60' : '#2980B9', color: '#FFF', fontWeight: 'bold' }}>
-                        {b.invoice_no.includes('ON') ? '🌐 ONLINE' : '🛍️ OFFLINE'}
-                      </span>
+                      
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button onClick={() => setSelectedBillDetails(b)} style={{ background: '#3498DB', color: '#FFF', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer' }}>View 🔍</button>
+                        <button onClick={() => setEditingBill(b)} style={{ background: '#F39C12', color: '#FFF', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer' }}>Edit ✏️</button>
+                        <button onClick={() => handleDeleteBill(b.id)} style={{ background: '#E74C3C', color: '#FFF', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer' }}>Delete 🗑️</button>
+                      </div>
                     </div>
                     <div style={{ fontSize: '10px', color: '#7A8C82', marginTop: '4px' }}>
-                      Date: {new Date(b.created_at).toLocaleString()} (Click to View Full Bill 🔍)
+                      Date: {new Date(b.created_at).toLocaleString()}
                     </div>
                   </div>
                 ))}
@@ -439,7 +548,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* TAB 4: PROFIT (DAILY vs MONTHLY TOTAL) */}
+        {/* TAB 4: PROFIT */}
         {activeTab === 'profit' && (
           <div>
             <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
@@ -478,38 +587,4 @@ export default function AdminPage() {
 
       {/* BILL DETAILS MODAL */}
       {selectedBillDetails && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '15px' }}>
-          <div style={{ background: '#020905', border: '2px solid #FFD700', borderRadius: '12px', padding: '20px', width: '100%', maxWidth: '380px', boxSizing: 'border-box' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #FFD700', paddingBottom: '8px', marginBottom: '12px' }}>
-              <h3 style={{ margin: 0, color: '#FFD700', fontSize: '16px' }}>Invoice: {selectedBillDetails.invoice_no}</h3>
-              <button onClick={() => setSelectedBillDetails(null)} style={{ background: 'none', border: 'none', color: '#FFF', fontSize: '18px', cursor: 'pointer' }}>✕</button>
-            </div>
-            
-            <div style={{ fontSize: '12px', marginBottom: '10px' }}>
-              <div><strong>Type:</strong> {selectedBillDetails.invoice_no.includes('ON') ? '🌐 ONLINE ORDER' : '🛍️ OFFLINE POS'}</div>
-              <div><strong>Customer:</strong> {selectedBillDetails.customer_name}</div>
-              <div><strong>Phone:</strong> {selectedBillDetails.customer_phone || 'N/A'}</div>
-              <div><strong>Date:</strong> {new Date(selectedBillDetails.created_at).toLocaleString()}</div>
-            </div>
-
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '8px', marginBottom: '12px' }}>
-              <div style={{ fontWeight: 'bold', fontSize: '12px', color: '#FFD700', marginBottom: '6px' }}>Bill Items:</div>
-              {selectedBillDetails.bill_items && selectedBillDetails.bill_items.map((item, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
-                  <span>{item.product_name} x {item.quantity}</span>
-                  <span style={{ color: '#FFD700' }}>₹{item.total_price}</span>
-                </div>
-              ))}
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', color: '#FFD700', fontSize: '15px', borderTop: '1px solid #FFD700', paddingTop: '8px' }}>
-              <span>Total Amount:</span>
-              <span>₹{selectedBillDetails.total_amount}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-    </div>
-  );
-                      }
+     
