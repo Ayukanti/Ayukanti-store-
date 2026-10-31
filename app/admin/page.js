@@ -14,11 +14,19 @@ export default function AdminPage() {
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Search & Filters State
+  const [posSearch, setPosSearch] = useState('');
+  const [historySubTab, setHistorySubTab] = useState('online');
+  const [selectedBillDetails, setSelectedBillDetails] = useState(null);
+  const [profitSubTab, setProfitSubTab] = useState('daily');
+
+  // POS State
   const [cart, setCart] = useState([]);
   const [custName, setCustName] = useState('');
   const [custPhone, setCustPhone] = useState('');
   const [custAddress, setCustAddress] = useState('');
 
+  // Product Form State
   const [editingId, setEditingId] = useState(null);
   const [pName, setPName] = useState('');
   const [pCat, setPCat] = useState('');
@@ -100,12 +108,7 @@ export default function AdminPage() {
 
   const resetForm = () => {
     setEditingId(null);
-    setPName('');
-    setPCat('');
-    setPPrice('');
-    setPDisc('');
-    setPStock('');
-    setPImg('');
+    setPName(''); setPCat(''); setPPrice(''); setPDisc(''); setPStock(''); setPImg('');
   };
 
   const handleDeleteProduct = async (id) => {
@@ -131,7 +134,7 @@ export default function AdminPage() {
 
   const handleGenerateBill = async (e) => {
     e.preventDefault();
-    if (cart.length === 0 || !custName) return alert('Details aur cart items bharein!');
+    if (cart.length === 0 || !custName) return alert('Customer Name aur Cart Items zaroori hain!');
 
     const prefix = billSubTab === 'online' ? 'AYU-ON-' : 'AYU-OFF-';
     const invoiceNo = prefix + Date.now().toString().slice(-6);
@@ -172,11 +175,8 @@ export default function AdminPage() {
           });
         }
 
-        alert(`Bill Generated! (${invoiceNo})`);
-        setCart([]);
-        setCustName('');
-        setCustPhone('');
-        setCustAddress('');
+        alert(`Bill Generated Successfully! Invoice: ${invoiceNo}`);
+        setCart([]); setCustName(''); setCustPhone(''); setCustAddress('');
         loadData();
       }
     } catch (err) {
@@ -184,30 +184,39 @@ export default function AdminPage() {
     }
   };
 
-  const getProfitData = () => {
+  const getDailyProfit = () => {
     const dailyMap = {};
     bills.forEach((b) => {
       const dateStr = new Date(b.created_at).toLocaleDateString();
-      if (!dailyMap[dateStr]) {
-        dailyMap[dateStr] = { totalSales: 0, billCount: 0 };
-      }
-      dailyMap[dateStr].totalSales += parseFloat(b.total_amount || 0);
-      dailyMap[dateStr].billCount += 1;
+      if (!dailyMap[dateStr]) dailyMap[dateStr] = { sales: 0, count: 0 };
+      dailyMap[dateStr].sales += parseFloat(b.total_amount || 0);
+      dailyMap[dateStr].count += 1;
     });
     return Object.entries(dailyMap).map(([date, data]) => ({
-      date,
-      sales: data.totalSales,
-      bills: data.billCount,
-      estProfit: Math.round(data.totalSales * 0.35)
+      label: date, sales: data.sales, count: data.count, profit: Math.round(data.sales * 0.35)
+    }));
+  };
+
+  const getMonthlyProfit = () => {
+    const monthlyMap = {};
+    bills.forEach((b) => {
+      const d = new Date(b.created_at);
+      const monthStr = d.toLocaleString('default', { month: 'short', year: 'numeric' });
+      if (!monthlyMap[monthStr]) monthlyMap[monthStr] = { sales: 0, count: 0 };
+      monthlyMap[monthStr].sales += parseFloat(b.total_amount || 0);
+      monthlyMap[monthStr].count += 1;
+    });
+    return Object.entries(monthlyMap).map(([month, data]) => ({
+      label: month, sales: data.sales, count: data.count, profit: Math.round(data.sales * 0.35)
     }));
   };
 
   if (!isAuthenticated) {
     return (
       <div style={{ minHeight: '100vh', background: '#061E15', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '15px', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-        <form onSubmit={handleLogin} style={{ background: '#020905', border: '1px solid #D4AF37', padding: '25px', borderRadius: '12px', textAlign: 'center', width: '100%', maxWidth: '320px', boxSizing: 'border-box' }}>
+        <form onSubmit={handleLogin} style={{ background: '#020905', border: '2px solid #FFD700', padding: '25px', borderRadius: '12px', textAlign: 'center', width: '100%', maxWidth: '320px', boxSizing: 'border-box' }}>
           <div style={{ fontSize: '32px', marginBottom: '8px' }}>🌿</div>
-          <h2 style={{ color: '#D4AF37', fontFamily: "'Cinzel', serif", margin: '0 0 10px 0', fontSize: '20px' }}>AYUKANTI ADMIN</h2>
+          <h2 style={{ color: '#FFD700', fontFamily: "'Cinzel', serif", margin: '0 0 10px 0', fontSize: '20px' }}>AYUKANTI ADMIN</h2>
           <p style={{ color: '#A0B2A6', fontSize: '12px', marginBottom: '20px' }}>Security Access</p>
           <input
             type="password"
@@ -215,22 +224,22 @@ export default function AdminPage() {
             value={pinInput}
             onChange={(e) => setPinInput(e.target.value)}
             required
-            style={{ width: '100%', padding: '12px', background: '#061E15', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '6px', textAlign: 'center', fontSize: '16px', letterSpacing: '2px', boxSizing: 'border-box', marginBottom: '15px' }}
+            style={{ width: '100%', padding: '12px', background: '#061E15', border: '1px solid #FFD700', color: '#FFF', borderRadius: '6px', textAlign: 'center', fontSize: '16px', letterSpacing: '2px', boxSizing: 'border-box', marginBottom: '15px' }}
           />
-          <button type="submit" style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #D4AF37, #AA7C11)', color: '#03120C', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Unlock Panel</button>
+          <button type="submit" style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #FFD700, #AA7C11)', color: '#03120C', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Unlock Panel</button>
         </form>
       </div>
     );
 }
   return (
-    <div style={{ minHeight: '100vh', background: '#061E15', color: '#F6F1E8', fontFamily: "'Plus Jakarta Sans', sans-serif", overflowX: 'hidden', maxWidth: '100vw' }}>
-      <header style={{ background: '#03120C', borderBottom: '1px solid rgba(212,175,55,0.4)', padding: '12px 15px', display: 'flex', flexDirection: 'column', gap: '12px', position: 'sticky', top: 0, zIndex: 100 }}>
+    <div style={{ minHeight: '100vh', background: '#061E15', color: '#F6F1E8', fontFamily: "'Plus Jakarta Sans', sans-serif", overflowX: 'hidden' }}>
+      <header style={{ background: '#03120C', borderBottom: '2px solid #FFD700', padding: '12px 15px', display: 'flex', flexDirection: 'column', gap: '10px', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>🌿</span>
-            <h1 style={{ margin: 0, color: '#D4AF37', fontFamily: "'Cinzel', serif", fontSize: '18px', letterSpacing: '1px' }}>AYUKANTI ADMIN</h1>
+            <h1 style={{ margin: 0, color: '#FFD700', fontFamily: "'Cinzel', serif", fontSize: '18px', letterSpacing: '1px' }}>AYUKANTI ADMIN</h1>
           </div>
-          <button onClick={() => setIsAuthenticated(false)} style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid #E74C3C', background: '#E74C3C', color: '#FFF', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer' }}>Lock 🔒</button>
+          <button onClick={() => setIsAuthenticated(false)} style={{ padding: '5px 10px', borderRadius: '6px', border: 'none', background: '#E74C3C', color: '#FFF', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer' }}>Lock 🔒</button>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
@@ -246,13 +255,12 @@ export default function AdminPage() {
               style={{
                 padding: '8px 2px',
                 borderRadius: '6px',
-                border: activeTab === tab.id ? '1px solid #D4AF37' : '1px solid rgba(212,175,55,0.2)',
-                background: activeTab === tab.id ? '#D4AF37' : '#020905',
-                color: activeTab === tab.id ? '#03120C' : '#D4AF37',
+                border: activeTab === tab.id ? '2px solid #FFD700' : '1px solid rgba(255,215,0,0.3)',
+                background: activeTab === tab.id ? '#FFD700' : '#020905',
+                color: activeTab === tab.id ? '#03120C' : '#FFD700',
                 fontWeight: 'bold',
                 fontSize: '12px',
-                cursor: 'pointer',
-                textAlign: 'center'
+                cursor: 'pointer'
               }}
             >
               {tab.label}
@@ -262,22 +270,24 @@ export default function AdminPage() {
       </header>
 
       <main style={{ padding: '15px', maxWidth: '1000px', margin: '0 auto', boxSizing: 'border-box' }}>
+        
+        {/* TAB 1: PRODUCT */}
         {activeTab === 'products' && (
           <div>
-            <div style={{ background: '#020905', border: '1px solid rgba(212,175,55,0.4)', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
-              <h3 style={{ margin: '0 0 12px 0', color: '#D4AF37', fontSize: '15px' }}>
+            <div style={{ background: '#020905', border: '1px solid #FFD700', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
+              <h3 style={{ margin: '0 0 12px 0', color: '#FFD700', fontSize: '15px' }}>
                 {editingId ? '✏️ Edit Product Details' : '➕ Add New Product'}
               </h3>
-              <form onSubmit={handleSaveProduct} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px' }}>
-                <input type="text" placeholder="Product Name *" value={pName} onChange={(e) => setPName(e.target.value)} required style={{ padding: '8px', background: '#061E15', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
-                <input type="text" placeholder="Category" value={pCat} onChange={(e) => setPCat(e.target.value)} style={{ padding: '8px', background: '#061E15', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
-                <input type="number" placeholder="Price (₹) *" value={pPrice} onChange={(e) => setPPrice(e.target.value)} required style={{ padding: '8px', background: '#061E15', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
-                <input type="number" placeholder="Discount (₹)" value={pDisc} onChange={(e) => setPDisc(e.target.value)} style={{ padding: '8px', background: '#061E15', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
-                <input type="number" placeholder="Stock Qty *" value={pStock} onChange={(e) => setPStock(e.target.value)} required style={{ padding: '8px', background: '#061E15', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
-                <input type="url" placeholder="Image URL (http...)" value={pImg} onChange={(e) => setPImg(e.target.value)} style={{ padding: '8px', background: '#061E15', border: '1px solid #D4AF37', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
+              <form onSubmit={handleSaveProduct} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <input type="text" placeholder="Product Name *" value={pName} onChange={(e) => setPName(e.target.value)} required style={{ padding: '8px', background: '#061E15', border: '1px solid #FFD700', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
+                <input type="text" placeholder="Category" value={pCat} onChange={(e) => setPCat(e.target.value)} style={{ padding: '8px', background: '#061E15', border: '1px solid #FFD700', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
+                <input type="number" placeholder="Price (₹) *" value={pPrice} onChange={(e) => setPPrice(e.target.value)} required style={{ padding: '8px', background: '#061E15', border: '1px solid #FFD700', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
+                <input type="number" placeholder="Discount (₹)" value={pDisc} onChange={(e) => setPDisc(e.target.value)} style={{ padding: '8px', background: '#061E15', border: '1px solid #FFD700', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
+                <input type="number" placeholder="Stock Qty *" value={pStock} onChange={(e) => setPStock(e.target.value)} required style={{ padding: '8px', background: '#061E15', border: '1px solid #FFD700', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
+                <input type="url" placeholder="Image URL (http...)" value={pImg} onChange={(e) => setPImg(e.target.value)} style={{ padding: '8px', background: '#061E15', border: '1px solid #FFD700', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
                 
-                <div style={{ display: 'flex', gap: '5px', gridColumn: '1 / -1' }}>
-                  <button type="submit" style={{ flex: 1, padding: '10px', background: 'linear-gradient(135deg, #D4AF37, #AA7C11)', color: '#03120C', border: 'none', fontWeight: 'bold', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>
+                <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
+                  <button type="submit" style={{ flex: 1, padding: '10px', background: 'linear-gradient(135deg, #FFD700, #AA7C11)', color: '#03120C', border: 'none', fontWeight: 'bold', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>
                     {editingId ? '✓ Update Product' : '+ Add Product'}
                   </button>
                   {editingId && (
@@ -287,10 +297,10 @@ export default function AdminPage() {
               </form>
             </div>
 
-            <h3 style={{ color: '#D4AF37', fontSize: '15px', marginBottom: '10px' }}>📦 Product Inventory List</h3>
+            <h3 style={{ color: '#FFD700', fontSize: '15px', marginBottom: '10px' }}>📦 Product Inventory List</h3>
             <div style={{ display: 'grid', gap: '10px' }}>
               {products.map((p) => (
-                <div key={p.id} style={{ background: '#020905', border: '1px solid rgba(212,175,55,0.3)', padding: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                <div key={p.id} style={{ background: '#020905', border: '1px solid rgba(255,215,0,0.4)', padding: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     {p.image_url ? (
                       <img src={p.image_url} alt={p.name} style={{ width: '45px', height: '45px', objectFit: 'cover', borderRadius: '4px' }} />
@@ -298,8 +308,8 @@ export default function AdminPage() {
                       <div style={{ width: '45px', height: '45px', background: '#061E15', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🌿</div>
                     )}
                     <div>
-                      <div style={{ fontWeight: 'bold', fontSize: '13px' }}>{p.name}</div>
-                      <div style={{ fontSize: '11px', color: '#D4AF37' }}>₹{p.price - (p.discount || 0)} | {p.category}</div>
+                      <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#FFF' }}>{p.name}</div>
+                      <div style={{ fontSize: '11px', color: '#FFD700' }}>₹{p.price - (p.discount || 0)} | {p.category}</div>
                       <div style={{ fontSize: '10px', marginTop: '2px' }}>
                         {p.stock > 0 ? <span style={{ color: '#2ECC71' }}>🟢 Stock: {p.stock}</span> : <span style={{ color: '#E74C3C' }}>🔴 Out of Stock</span>}
                       </div>
@@ -315,42 +325,54 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* TAB 2: BILLS (POS) WITH SEARCH */}
         {activeTab === 'bills' && (
           <div>
             <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
               <button
                 onClick={() => setBillSubTab('offline')}
-                style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #D4AF37', background: billSubTab === 'offline' ? '#D4AF37' : '#020905', color: billSubTab === 'offline' ? '#03120C' : '#D4AF37', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
+                style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #FFD700', background: billSubTab === 'offline' ? '#FFD700' : '#020905', color: billSubTab === 'offline' ? '#03120C' : '#FFD700', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
               >
                 Offline Billing (POS)
               </button>
               <button
                 onClick={() => setBillSubTab('online')}
-                style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #D4AF37', background: billSubTab === 'online' ? '#D4AF37' : '#020905', color: billSubTab === 'online' ? '#03120C' : '#D4AF37', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
+                style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #FFD700', background: billSubTab === 'online' ? '#FFD700' : '#020905', color: billSubTab === 'online' ? '#03120C' : '#FFD700', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
               >
                 Online Orders Billing
               </button>
             </div>
 
-            <div style={{ background: '#020905', border: '1px solid #D4AF37', borderRadius: '8px', padding: '15px' }}>
-              <h3 style={{ color: '#D4AF37', margin: '0 0 10px 0', fontSize: '15px' }}>
+            <div style={{ background: '#020905', border: '1px solid #FFD700', borderRadius: '8px', padding: '15px' }}>
+              <h3 style={{ color: '#FFD700', margin: '0 0 10px 0', fontSize: '15px' }}>
                 {billSubTab === 'offline' ? '🛍️ Offline Counter POS' : '🌐 Online Customer Billing'}
               </h3>
               
-              <div style={{ display: 'grid', gap: '8px', marginBottom: '12px' }}>
-                <input type="text" placeholder="Customer Name *" value={custName} onChange={(e) => setCustName(e.target.value)} style={{ padding: '8px', background: '#061E15', border: '1px solid rgba(212,175,55,0.4)', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
-                <input type="tel" placeholder="Mobile Number *" value={custPhone} onChange={(e) => setCustPhone(e.target.value)} style={{ padding: '8px', background: '#061E15', border: '1px solid rgba(212,175,55,0.4)', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                <input type="text" placeholder="Customer Name *" value={custName} onChange={(e) => setCustName(e.target.value)} style={{ padding: '8px', background: '#061E15', border: '1px solid rgba(255,215,0,0.4)', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
+                <input type="tel" placeholder="Mobile Number *" value={custPhone} onChange={(e) => setCustPhone(e.target.value)} style={{ padding: '8px', background: '#061E15', border: '1px solid rgba(255,215,0,0.4)', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
                 {billSubTab === 'online' && (
-                  <input type="text" placeholder="Delivery Address" value={custAddress} onChange={(e) => setCustAddress(e.target.value)} style={{ padding: '8px', background: '#061E15', border: '1px solid rgba(212,175,55,0.4)', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
+                  <input type="text" placeholder="Delivery Address" value={custAddress} onChange={(e) => setCustAddress(e.target.value)} style={{ padding: '8px', background: '#061E15', border: '1px solid rgba(255,215,0,0.4)', color: '#FFF', borderRadius: '4px', fontSize: '12px' }} />
                 )}
               </div>
 
-              <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#D4AF37', marginBottom: '8px' }}>Select Items to Bill:</div>
+              {/* Product Search Bar inside POS */}
+              <div style={{ marginBottom: '10px' }}>
+                <input
+                  type="text"
+                  placeholder="🔍 Search product for billing..."
+                  value={posSearch}
+                  onChange={(e) => setPosSearch(e.target.value)}
+                  style={{ width: '100%', padding: '8px', background: '#061E15', border: '1px solid #FFD700', color: '#FFF', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div style={{ fontWeight: 'bold', fontSize: '12px', color: '#FFD700', marginBottom: '8px' }}>Select Product:</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '8px', maxHeight: '180px', overflowY: 'auto', marginBottom: '15px' }}>
-                {products.map((p) => (
-                  <div key={p.id} onClick={() => addToPos(p)} style={{ background: '#061E15', border: '1px solid rgba(212,175,55,0.2)', padding: '8px', borderRadius: '6px', cursor: 'pointer', opacity: p.stock > 0 ? 1 : 0.5 }}>
+                {products.filter(p => p.name.toLowerCase().includes(posSearch.toLowerCase())).map((p) => (
+                  <div key={p.id} onClick={() => addToPos(p)} style={{ background: '#061E15', border: '1px solid rgba(255,215,0,0.3)', padding: '8px', borderRadius: '6px', cursor: 'pointer', opacity: p.stock > 0 ? 1 : 0.5 }}>
                     <div style={{ fontSize: '11px', fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
-                    <div style={{ color: '#D4AF37', fontSize: '11px' }}>₹{p.price - (p.discount || 0)}</div>
+                    <div style={{ color: '#FFD700', fontSize: '11px' }}>₹{p.price - (p.discount || 0)}</div>
                   </div>
                 ))}
               </div>
@@ -360,56 +382,91 @@ export default function AdminPage() {
                 {cart.map((item) => (
                   <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px', background: '#061E15', padding: '4px 8px', borderRadius: '4px' }}>
                     <span>{item.name} x {item.qty}</span>
-                    <span style={{ color: '#D4AF37' }}>₹{(item.price - (item.discount || 0)) * item.qty}</span>
+                    <span style={{ color: '#FFD700' }}>₹{(item.price - (item.discount || 0)) * item.qty}</span>
                   </div>
                 ))}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', color: '#D4AF37', margin: '12px 0', fontSize: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', color: '#FFD700', margin: '12px 0', fontSize: '16px' }}>
                 <span>Total:</span>
                 <span>₹{posTotal}</span>
               </div>
 
-              <button onClick={handleGenerateBill} style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #D4AF37, #AA7C11)', color: '#03120C', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Generate & Save Bill</button>
+              <button onClick={handleGenerateBill} style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #FFD700, #AA7C11)', color: '#03120C', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Generate & Save Bill</button>
             </div>
           </div>
         )}
 
+        {/* TAB 3: HISTORY (ONLINE vs OFFLINE FOLDERS & CLICKABLE DETAILS) */}
         {activeTab === 'history' && (
           <div>
-            <h3 style={{ color: '#D4AF37', fontSize: '15px', marginBottom: '10px' }}>📜 Complete Bill History Log</h3>
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+              <button
+                onClick={() => setHistorySubTab('online')}
+                style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #FFD700', background: historySubTab === 'online' ? '#FFD700' : '#020905', color: historySubTab === 'online' ? '#03120C' : '#FFD700', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
+              >
+                🌐 Online Bills Folder
+              </button>
+              <button
+                onClick={() => setHistorySubTab('offline')}
+                style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #FFD700', background: historySubTab === 'offline' ? '#FFD700' : '#020905', color: historySubTab === 'offline' ? '#03120C' : '#FFD700', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
+              >
+                🛍️ Offline Bills Folder
+              </button>
+            </div>
+
             <div style={{ display: 'grid', gap: '10px' }}>
-              {bills.map((b) => (
-                <div key={b.id} style={{ background: '#020905', border: '1px solid rgba(212,175,55,0.3)', padding: '12px', borderRadius: '8px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', color: '#D4AF37', fontSize: '13px' }}>
-                    <span>{b.invoice_no}</span>
-                    <span>₹{b.total_amount}</span>
+              {bills
+                .filter(b => historySubTab === 'online' ? b.invoice_no.includes('ON') : !b.invoice_no.includes('ON'))
+                .map((b) => (
+                  <div key={b.id} onClick={() => setSelectedBillDetails(b)} style={{ background: '#020905', border: '1px solid rgba(255,215,0,0.4)', padding: '12px', borderRadius: '8px', cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', color: '#FFD700', fontSize: '13px' }}>
+                      <span>{b.invoice_no}</span>
+                      <span>₹{b.total_amount}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+                      <span style={{ fontSize: '12px', color: '#FFF' }}>{b.customer_name} ({b.customer_phone || 'N/A'})</span>
+                      <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: b.invoice_no.includes('ON') ? '#27AE60' : '#2980B9', color: '#FFF', fontWeight: 'bold' }}>
+                        {b.invoice_no.includes('ON') ? '🌐 ONLINE' : '🛍️ OFFLINE'}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#7A8C82', marginTop: '4px' }}>
+                      Date: {new Date(b.created_at).toLocaleString()} (Click to View Full Bill 🔍)
+                    </div>
                   </div>
-                  <div style={{ fontSize: '12px', color: '#A0B2A6', marginTop: '4px' }}>
-                    Customer: {b.customer_name} ({b.customer_phone || 'N/A'})
-                  </div>
-                  <div style={{ fontSize: '10px', color: '#7A8C82', marginTop: '4px' }}>
-                    Date: {new Date(b.created_at).toLocaleString()}
-                  </div>
-                </div>
-              ))}
+                ))}
             </div>
           </div>
         )}
 
+        {/* TAB 4: PROFIT (DAILY vs MONTHLY TOTAL) */}
         {activeTab === 'profit' && (
           <div>
-            <h3 style={{ color: '#D4AF37', fontSize: '15px', marginBottom: '10px' }}>📊 Day-Wise Revenue & Estimated Profit</h3>
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+              <button
+                onClick={() => setProfitSubTab('daily')}
+                style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #FFD700', background: profitSubTab === 'daily' ? '#FFD700' : '#020905', color: profitSubTab === 'daily' ? '#03120C' : '#FFD700', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
+              >
+                📅 Daily Total Profit
+              </button>
+              <button
+                onClick={() => setProfitSubTab('monthly')}
+                style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #FFD700', background: profitSubTab === 'monthly' ? '#FFD700' : '#020905', color: profitSubTab === 'monthly' ? '#03120C' : '#FFD700', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
+              >
+                📊 Monthly Total Profit
+              </button>
+            </div>
+
             <div style={{ display: 'grid', gap: '10px' }}>
-              {getProfitData().map((day, idx) => (
-                <div key={idx} style={{ background: '#020905', border: '1px solid rgba(212,175,55,0.3)', padding: '12px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {(profitSubTab === 'daily' ? getDailyProfit() : getMonthlyProfit()).map((row, idx) => (
+                <div key={idx} style={{ background: '#020905', border: '1px solid rgba(255,215,0,0.4)', padding: '12px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontWeight: 'bold', color: '#FFF', fontSize: '13px' }}>📅 Date: {day.date}</div>
-                    <div style={{ fontSize: '11px', color: '#A0B2A6', marginTop: '2px' }}>Total Bills: {day.bills}</div>
+                    <div style={{ fontWeight: 'bold', color: '#FFF', fontSize: '13px' }}>{profitSubTab === 'daily' ? '📅 Date:' : '📊 Month:'} {row.label}</div>
+                    <div style={{ fontSize: '11px', color: '#A0B2A6', marginTop: '2px' }}>Total Bills: {row.count}</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ color: '#D4AF37', fontWeight: 'bold', fontSize: '13px' }}>Sales: ₹{day.sales}</div>
-                    <div style={{ color: '#2ECC71', fontWeight: 'bold', fontSize: '11px', marginTop: '2px' }}>Est. Profit: ₹{day.estProfit}</div>
+                    <div style={{ color: '#FFD700', fontWeight: 'bold', fontSize: '13px' }}>Sales: ₹{row.sales}</div>
+                    <div style={{ color: '#2ECC71', fontWeight: 'bold', fontSize: '12px', marginTop: '2px' }}>Est. Profit: ₹{row.profit}</div>
                   </div>
                 </div>
               ))}
@@ -418,7 +475,41 @@ export default function AdminPage() {
         )}
 
       </main>
+
+      {/* BILL DETAILS MODAL */}
+      {selectedBillDetails && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '15px' }}>
+          <div style={{ background: '#020905', border: '2px solid #FFD700', borderRadius: '12px', padding: '20px', width: '100%', maxWidth: '380px', boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #FFD700', paddingBottom: '8px', marginBottom: '12px' }}>
+              <h3 style={{ margin: 0, color: '#FFD700', fontSize: '16px' }}>Invoice: {selectedBillDetails.invoice_no}</h3>
+              <button onClick={() => setSelectedBillDetails(null)} style={{ background: 'none', border: 'none', color: '#FFF', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            </div>
+            
+            <div style={{ fontSize: '12px', marginBottom: '10px' }}>
+              <div><strong>Type:</strong> {selectedBillDetails.invoice_no.includes('ON') ? '🌐 ONLINE ORDER' : '🛍️ OFFLINE POS'}</div>
+              <div><strong>Customer:</strong> {selectedBillDetails.customer_name}</div>
+              <div><strong>Phone:</strong> {selectedBillDetails.customer_phone || 'N/A'}</div>
+              <div><strong>Date:</strong> {new Date(selectedBillDetails.created_at).toLocaleString()}</div>
+            </div>
+
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '8px', marginBottom: '12px' }}>
+              <div style={{ fontWeight: 'bold', fontSize: '12px', color: '#FFD700', marginBottom: '6px' }}>Bill Items:</div>
+              {selectedBillDetails.bill_items && selectedBillDetails.bill_items.map((item, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
+                  <span>{item.product_name} x {item.quantity}</span>
+                  <span style={{ color: '#FFD700' }}>₹{item.total_price}</span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', color: '#FFD700', fontSize: '15px', borderTop: '1px solid #FFD700', paddingTop: '8px' }}>
+              <span>Total Amount:</span>
+              <span>₹{selectedBillDetails.total_amount}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
-                          }
-          
+                      }
